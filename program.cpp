@@ -1,11 +1,18 @@
 
 #include <cstdio>
+#include <cstdlib>
+#include <cmath>
 #include <iostream>
 #include <fstream>
 
 #include <Windows.h>
 
-using namespace std; 
+#include <conio.h>
+#include <windows.h>
+
+#include "serial_com.h"
+
+using namespace std;
 
 #define KEY(c) ( GetAsyncKeyState((int)(c)) & (SHORT)0x8000 )
 
@@ -22,6 +29,154 @@ using namespace std;
 
 extern robot_system S1;
 
+class camera
+{
+private:
+	image rgb, a, b;
+	int cam_number, width, height, type;
+	bool state, is_simulator;
+	int processing_type;
+public:
+	camera(int cam_number, int width, int height, int type, bool is_simulator, int processing_type);
+	int get_cam_number() { return cam_number; }
+	void view();
+	void view_sim();
+	void processing();
+	void free();
+};
+
+camera::camera(int cam_number, int width, int height, int type, bool is_simulator, int processing_type)
+{
+	this->cam_number = cam_number;
+	this->width = width;
+	this->height = height;
+	this->is_simulator = is_simulator;
+	this->processing_type = processing_type;
+
+	if (is_simulator != true)
+	{
+		activate_camera(cam_number, height, width);	// activate camera
+	}
+
+	rgb.width = width;
+	rgb.height = height;
+	rgb.type = type;
+
+	a.type = GREY_IMAGE;
+	a.width = width;
+	a.height = height;
+
+	b.type = GREY_IMAGE;
+	b.width = width;
+	b.height = height;
+	
+	allocate_image(rgb);
+	allocate_image(a);
+	allocate_image(b);
+}
+
+void camera::processing()
+{
+	if (is_simulator == true)
+	{
+		acquire_image_sim(rgb);
+	}
+	else
+	{
+		acquire_image(rgb, cam_number);
+	}
+
+	switch (processing_type)
+	{
+	case 0:
+
+		break;
+	case 1:
+
+		break;
+	case 2:
+		copy(rgb, a);
+		copy(a, rgb);
+		scale(a, b);
+		copy(b, a);
+		copy(a, rgb);
+		break;
+	}
+}
+
+void camera::view()
+{
+	view_rgb_image(rgb);
+}
+
+void camera::free()
+{
+	free_image(rgb);
+}
+
+#define KEY(c) ( GetAsyncKeyState((int)(c)) & (SHORT)0x8000 )
+
+class Serial
+{
+private:
+	HANDLE h1;
+	char buffer_in[64];
+	int speed;
+	char u[2];
+public:
+	Serial(char COM_number[], int speed);
+	void send(char servo_L, char servo_R, char confirm, char flag);
+	~Serial();
+};
+
+Serial::Serial(char COM_number[], int speed)
+{
+	this->speed = speed;
+
+	open_serial(COM_number, h1, speed);
+
+	cout << "\npress c key to continue, x to quit\n";
+	while (!KEY('C')) Sleep(1);
+}
+
+void Serial::send(char servo_L, char servo_R, char confirm, char flag)
+{
+	u[0] = 0;
+	u[1] = 0;
+
+	if (KEY(VK_UP)) u[0] = 20;
+
+	if (KEY(VK_DOWN)) u[0] = -20;
+
+	if (KEY(VK_RIGHT)) u[1] = -15;
+
+	if (KEY(VK_LEFT)) u[1] = 15;
+
+
+	buffer_in[0] = u[0] + u[1];
+
+	buffer_in[1] = u[0] - u[1];
+
+	if (abs(buffer_in[0]) > 0 || abs(buffer_in[1] > 0))
+	{
+		buffer_in[2] = 'S';
+	}
+	else {
+		buffer_in[2] = 's';
+	}
+
+	cout << (int)buffer_in[0] << "  " << (int)buffer_in[1] << "  " << buffer_in[2] << endl;
+
+
+	serial_send(buffer_in, 3, h1);
+	Sleep(350);
+}
+
+Serial::~Serial()
+{
+	close_serial(h1);
+}
+
 int main()
 {
 	double x0, y0, theta0, max_speed, opponent_max_speed;
@@ -34,9 +189,7 @@ int main()
 	double tc, tc0; // clock time
 	int mode, level;
 	int pw_l_o, pw_r_o, pw_laser_o, laser_o;
-	
-	// TODO: it might be better to put this model initialization
-	// section in a separate function
+	int cam_number;
 	
 	// note that the vision simulation library currently
 	// assumes an image size of 640x480
@@ -159,30 +312,35 @@ int main()
 	// exactly as before.
 	
 	// in addition, you can set the robot inputs to move it around
-	// the image and fire the laser.
-	
-	image rgb;
-	int height, width;
+	// the image and fire the laser
 
-	// note that the vision simulation library currently
-	// assumes an image size of 640x480
-	width  = 640;
-	height = 480;
+	Serial port("COM12", 1);
 
-	rgb.type = RGB_IMAGE;
-	rgb.width = width;
-	rgb.height = height;
+	int index = 0;
 
-	// allocate memory for the images
-	allocate_image(rgb);
+	camera* view[3];
+	view[0] = new camera(0, 640, 480, RGB_IMAGE, true, 1);	 //Simulator
+	view[1] = new camera(1, 640, 480, RGB_IMAGE, false, 2);	 //Top View Camera
+	view[2] = new camera(0, 640, 480, RGB_IMAGE, false, 0);  //Laptop Webcam *to become 1 first person view
 
 	// measure initial clock time
 	tc0 = high_resolution_time(); 
 
+
 	while(1) {
-		
-		// simulates the robots and acquires the image from simulation
-		acquire_image_sim(rgb);
+		port.send(0, 0, 0, 0);
+
+		if (KEY('V'))
+		{
+			index++;
+			if (index > 2) index = 0;
+			Sleep(350);
+		}
+
+		view[index]->processing();
+
+		view[index]->view();
+
 
 		tc = high_resolution_time() - tc0;
 
@@ -226,14 +384,12 @@ int main()
 		set_opponent_inputs(pw_l_o, pw_r_o, pw_laser_o, laser_o, 
 					opponent_max_speed);
 
-		view_rgb_image(rgb);
-
 		// don't need to simulate too fast
 		Sleep(10); // 100 fps max
 	}
 
+
 	// free the image memory before the program completes
-	free_image(rgb);
 
 	deactivate_vision();
 	

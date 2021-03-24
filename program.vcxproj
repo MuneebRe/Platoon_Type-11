@@ -138,10 +138,14 @@
   <ItemGroup>
     <ClCompile Include="program.cpp" />
     <ClCompile Include="robot.cpp" />
+    <ClCompile Include="serial_com.cpp" />
     <ClCompile Include="shared_memory.cpp" />
     <ClCompile Include="timer.cpp" />
     <ClCompile Include="vision.cpp" />
     <ClCompile Include="vision_simulation.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="serial_com.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
