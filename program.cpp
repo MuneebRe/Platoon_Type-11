@@ -29,7 +29,7 @@ using namespace std;
 
 extern robot_system S1;
 
-class camera
+class Camera
 {
 private:
 	image rgb, a, b;
@@ -37,21 +37,21 @@ private:
 	bool state, is_simulator;
 	int processing_type;
 public:
-	camera(int cam_number, int width, int height, int type, bool is_simulator, int processing_type);
+	Camera(bool state, int cam_number, int width, int height, int type, bool is_simulator, int processing_type);
 	int get_cam_number() { return cam_number; }
 	void view();
-	void view_sim();
 	void processing();
-	void free();
+	~Camera();
 };
 
-camera::camera(int cam_number, int width, int height, int type, bool is_simulator, int processing_type)
+Camera::Camera(bool state, int cam_number, int width, int height, int type, bool is_simulator, int processing_type)
 {
 	this->cam_number = cam_number;
 	this->width = width;
 	this->height = height;
 	this->is_simulator = is_simulator;
 	this->processing_type = processing_type;
+	this->state = state;
 
 	if (is_simulator != true)
 	{
@@ -75,8 +75,10 @@ camera::camera(int cam_number, int width, int height, int type, bool is_simulato
 	allocate_image(b);
 }
 
-void camera::processing()
+void Camera::processing()
 {
+	if (state == false) return;
+
 	if (is_simulator == true)
 	{
 		acquire_image_sim(rgb);
@@ -104,12 +106,14 @@ void camera::processing()
 	}
 }
 
-void camera::view()
+void Camera::view()
 {
+	if (state == false) return;
+
 	view_rgb_image(rgb);
 }
 
-void camera::free()
+Camera::~Camera()
 {
 	free_image(rgb);
 }
@@ -122,16 +126,18 @@ private:
 	HANDLE h1;
 	char buffer_in[64];
 	int speed;
+	bool state;
 	char u[2];
 public:
-	Serial(char COM_number[], int speed);
+	Serial(bool state, char COM_number[], int speed);
 	void send(char servo_L, char servo_R, char confirm, char flag);
 	~Serial();
 };
 
-Serial::Serial(char COM_number[], int speed)
+Serial::Serial(bool state, char COM_number[], int speed)
 {
 	this->speed = speed;
+	this->state = state;
 
 	open_serial(COM_number, h1, speed);
 
@@ -141,6 +147,7 @@ Serial::Serial(char COM_number[], int speed)
 
 void Serial::send(char servo_L, char servo_R, char confirm, char flag)
 {
+	if (state == false) return;
 	u[0] = 0;
 	u[1] = 0;
 
@@ -169,7 +176,7 @@ void Serial::send(char servo_L, char servo_R, char confirm, char flag)
 
 
 	serial_send(buffer_in, 3, h1);
-	Sleep(350);
+	//Sleep(350);
 }
 
 Serial::~Serial()
@@ -189,7 +196,6 @@ int main()
 	double tc, tc0; // clock time
 	int mode, level;
 	int pw_l_o, pw_r_o, pw_laser_o, laser_o;
-	int cam_number;
 	
 	// note that the vision simulation library currently
 	// assumes an image size of 640x480
@@ -314,21 +320,21 @@ int main()
 	// in addition, you can set the robot inputs to move it around
 	// the image and fire the laser
 
-	Serial port("COM12", 1);
-
 	int index = 0;
 
-	camera* view[3];
-	view[0] = new camera(0, 640, 480, RGB_IMAGE, true, 1);	 //Simulator
-	view[1] = new camera(1, 640, 480, RGB_IMAGE, false, 2);	 //Top View Camera
-	view[2] = new camera(0, 640, 480, RGB_IMAGE, false, 0);  //Laptop Webcam *to become 1 first person view
+	Camera* view[3];
+	view[0] = new Camera(true , 0, 640, 480, RGB_IMAGE, true, 1);	 //Simulator
+	view[1] = new Camera(false, 1, 640, 480, RGB_IMAGE, false, 2);	 //Top View Camera
+	view[2] = new Camera(false, 0, 640, 480, RGB_IMAGE, false, 0);  //Laptop Webcam *to become 1 first person view
+
+	Serial port(false, "COM12", 1);
 
 	// measure initial clock time
 	tc0 = high_resolution_time(); 
 
 
 	while(1) {
-		port.send(0, 0, 0, 0);
+		//port.send(0, 0, 0, 0);
 
 		if (KEY('V'))
 		{
@@ -338,7 +344,6 @@ int main()
 		}
 
 		view[index]->processing();
-
 		view[index]->view();
 
 
