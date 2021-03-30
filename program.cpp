@@ -1,3 +1,5 @@
+using namespace std;
+#define KEY(c) ( GetAsyncKeyState((int)(c)) & (SHORT)0x8000 )
 
 #include <cstdio>
 #include <cstdlib>
@@ -9,180 +11,22 @@
 
 #include <conio.h>
 #include <windows.h>
-
 #include "serial_com.h"
-
-using namespace std;
-
-#define KEY(c) ( GetAsyncKeyState((int)(c)) & (SHORT)0x8000 )
-
 #include "image_transfer.h"
 
-// include this header file for computer vision functions
 #include "vision.h"
-
 #include "robot.h"
-
 #include "vision_simulation.h"
-
 #include "timer.h"
+
+#include "Camera.h"
+#include "Serial.h"
+#include "PT11.h"
 
 extern robot_system S1;
 
-class Camera
-{
-private:
-	image rgb, a, b;
-	int cam_number, width, height, type;
-	bool state, is_simulator;
-	int processing_type;
-public:
-	Camera(bool state, int cam_number, int width, int height, int type, bool is_simulator, int processing_type);
-	int get_cam_number() { return cam_number; }
-	void view();
-	void processing();
-	~Camera();
-};
-
-Camera::Camera(bool state, int cam_number, int width, int height, int type, bool is_simulator, int processing_type)
-{
-	this->cam_number = cam_number;
-	this->width = width;
-	this->height = height;
-	this->is_simulator = is_simulator;
-	this->processing_type = processing_type;
-	this->state = state;
-
-	if (is_simulator != true)
-	{
-		activate_camera(cam_number, height, width);	// activate camera
-	}
-
-	rgb.width = width;
-	rgb.height = height;
-	rgb.type = type;
-
-	a.type = GREY_IMAGE;
-	a.width = width;
-	a.height = height;
-
-	b.type = GREY_IMAGE;
-	b.width = width;
-	b.height = height;
-	
-	allocate_image(rgb);
-	allocate_image(a);
-	allocate_image(b);
-}
-
-void Camera::processing()
-{
-	if (state == false) return;
-
-	if (is_simulator == true)
-	{
-		acquire_image_sim(rgb);
-	}
-	else
-	{
-		acquire_image(rgb, cam_number);
-	}
-
-	switch (processing_type)
-	{
-	case 0:
-
-		break;
-	case 1:
-
-		break;
-	case 2:
-		copy(rgb, a);
-		copy(a, rgb);
-		scale(a, b);
-		copy(b, a);
-		copy(a, rgb);
-		break;
-	}
-}
-
-void Camera::view()
-{
-	if (state == false) return;
-
-	view_rgb_image(rgb);
-}
-
-Camera::~Camera()
-{
-	free_image(rgb);
-}
 
 #define KEY(c) ( GetAsyncKeyState((int)(c)) & (SHORT)0x8000 )
-
-class Serial
-{
-private:
-	HANDLE h1;
-	char buffer_in[64];
-	int speed;
-	bool state;
-	char u[2];
-public:
-	Serial(bool state, char COM_number[], int speed);
-	void send(char servo_L, char servo_R, char confirm, char flag);
-	~Serial();
-};
-
-Serial::Serial(bool state, char COM_number[], int speed)
-{
-	this->speed = speed;
-	this->state = state;
-
-	open_serial(COM_number, h1, speed);
-
-	cout << "\npress c key to continue, x to quit\n";
-	while (!KEY('C')) Sleep(1);
-}
-
-void Serial::send(char servo_L, char servo_R, char confirm, char flag)
-{
-	if (state == false) return;
-	u[0] = 0;
-	u[1] = 0;
-
-	if (KEY(VK_UP)) u[0] = 20;
-
-	if (KEY(VK_DOWN)) u[0] = -20;
-
-	if (KEY(VK_RIGHT)) u[1] = -15;
-
-	if (KEY(VK_LEFT)) u[1] = 15;
-
-
-	buffer_in[0] = u[0] + u[1];
-
-	buffer_in[1] = u[0] - u[1];
-
-	if (abs(buffer_in[0]) > 0 || abs(buffer_in[1] > 0))
-	{
-		buffer_in[2] = 'S';
-	}
-	else {
-		buffer_in[2] = 's';
-	}
-
-	cout << (int)buffer_in[0] << "  " << (int)buffer_in[1] << "  " << buffer_in[2] << endl;
-
-
-	serial_send(buffer_in, 3, h1);
-	//Sleep(350);
-}
-
-Serial::~Serial()
-{
-	close_serial(h1);
-}
 
 int main()
 {
@@ -236,27 +80,15 @@ int main()
 	cout << "\npress space key to begin program.";
 	pause();
 
-	// you need to activate the regular vision library before 
-	// activating the vision simulation library
 	activate_vision();
-
-	// note it's assumed that the robot points upware in its bmp file
-	
-	// however, Lx, Ly, Ax, Ay assume robot image has already been
-	// rotated 90 deg so that the robot is pointing in the x-direction
-	// -- ie when specifying these parameters assume the robot
-	// is pointing in the x-direction.
-
-	// note that the robot opponent is not currently implemented in 
-	// the library, but it will be implemented soon.
 
 	activate_simulation(width1,height1,x_obs,y_obs,size_obs,N_obs,
 		"robot_A.bmp","robot_B.bmp","background.bmp","obstacle.bmp",D,Lx,Ly,
 		Ax,Ay,alpha_max,n_robot);	
 
 	// open an output file if needed for testing or plotting
-//	ofstream fout("sim1.txt");
-//	fout << scientific;
+	//	ofstream fout("sim1.txt");
+	//	fout << scientific;
 	
 	// set simulation mode (level is currently not implemented)
 	// mode = 0 - single player mode (manual opponent)
@@ -278,11 +110,12 @@ int main()
 	theta0 = 3.14159/4;
 	set_opponent_position(x0,y0,theta0);
 
-	// set initial inputs / on-line adjustable parameters /////////
+	// set initial inputs / on-line adjustable parameters /////////	
 
 	// inputs
 	pw_l = 1250; // pulse width for left wheel servo (us)
 	pw_r = 2000; // pulse width for right wheel servo (us)
+
 	pw_laser = 1500; // pulse width for laser servo (us)
 	laser = 0; // laser input (0 - off, 1 - fire)
 	
@@ -320,6 +153,17 @@ int main()
 	// in addition, you can set the robot inputs to move it around
 	// the image and fire the laser
 
+	image a, b;
+
+
+
+	a.type = GREY_IMAGE;
+	a.width = 640;
+	a.height = 480;
+
+
+	allocate_image(a);
+
 	int index = 0;
 
 	Camera* view[3];
@@ -329,63 +173,37 @@ int main()
 
 	Serial port(false, "COM12", 1);
 
+	PT11 pt11;
+
 	// measure initial clock time
 	tc0 = high_resolution_time(); 
-
+	
 
 	while(1) {
-		//port.send(0, 0, 0, 0);
 
-		if (KEY('V'))
+		port.send(0, 0, 0, 0);
+
+		if (index > 2) index = 0;
+
+		if (KEY('V') || view[index]->get_state() == false)
 		{
 			index++;
-			if (index > 2) index = 0;
 			Sleep(350);
+			continue;
 		}
 
 		view[index]->processing();
 		view[index]->view();
 
+		pt11.manual_set(pw_l, pw_r, pw_laser, laser);
 
 		tc = high_resolution_time() - tc0;
 
-		// fire laser
-		if(tc > 1) laser = 1;
-		
-		if(tc > 9) laser_o = 1;
 
-		// turn off the lasers so we can fire it again later
-		if(tc > 10) { 
-			laser = 0;
-			laser_o = 0;
-		}
-		
-		// fire laser at tc = 14 s
-		if(tc > 14) {
-			laser = 1;
-			
-			// turn laser angle alpha at the same time
-			pw_laser = 1000;
-		}
-
-		// change the inputs to move the robot around
-		// or change some additional parameters (lighting, etc.)
-		
-		// only the following inputs work so far
-		// pw_l -- pulse width of left servo (us) (from 1000 to 2000)
-		// pw_r -- pulse width of right servo (us) (from 1000 to 2000)
-		// pw_laser -- pulse width of laser servo (us) (from 1000 to 2000)
-		// -- 1000 -> -90 deg
-		// -- 1500 -> 0 deg
-		// -- 2000 -> 90 deg
-		// laser -- (0 - laser off, 1 - fire laser for 3 s)
-		// max_speed -- pixels/s for right and left wheels
 		set_inputs(pw_l,pw_r,pw_laser,laser,
 			light,light_gradient,light_dir,image_noise,
 			max_speed,opponent_max_speed);
 
-		// manually set opponent inputs for the simulation
-		// -- good for testing your program
 		set_opponent_inputs(pw_l_o, pw_r_o, pw_laser_o, laser_o, 
 					opponent_max_speed);
 

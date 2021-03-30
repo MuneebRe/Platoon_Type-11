@@ -11,3 +11,13 @@
 *.pdb
 *.tlog
 *.db
+*.db
+*.db-wal
+*.db-shm
+.vs/program/v16/.suo
+*.db
+*.opendb
+*.db
+.vs/program/v16/.suo
+*.db
+.vs/program/v16/Browse.VC.db
