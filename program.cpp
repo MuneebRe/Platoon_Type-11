@@ -153,23 +153,14 @@ int main()
 	// in addition, you can set the robot inputs to move it around
 	// the image and fire the laser
 
-	image a, b;
-
-
-
-	a.type = GREY_IMAGE;
-	a.width = 640;
-	a.height = 480;
-
-
-	allocate_image(a);
-
 	int index = 0;
 
+	int view_state[3] = { true, false, false };
+
 	Camera* view[3];
-	view[0] = new Camera(true , 0, 640, 480, RGB_IMAGE, true, 1);	 //Simulator
-	view[1] = new Camera(false, 1, 640, 480, RGB_IMAGE, false, 2);	 //Top View Camera
-	view[2] = new Camera(false, 0, 640, 480, RGB_IMAGE, false, 0);  //Laptop Webcam *to become 1 first person view
+	view[0] = new Camera(view_state[0], 0, 640, 480, RGB_IMAGE, true, 1);	 //Simulator
+	view[1] = new Camera(view_state[1], 1, 640, 480, RGB_IMAGE, false, 0);	 //Top View Camera
+	view[2] = new Camera(view_state[2], 0, 640, 480, RGB_IMAGE, false, 0);  //Laptop Webcam *to become 1 first person view
 
 	Serial port(false, "COM12", 1);
 
@@ -177,28 +168,44 @@ int main()
 
 	// measure initial clock time
 	tc0 = high_resolution_time(); 
+
 	
+	view[0]->find_object();
 
 	while(1) {
 
 		port.send(0, 0, 0, 0);
 
-		if (index > 2) index = 0;
-
-		if (KEY('V') || view[index]->get_state() == false)
+		if (index > view[0]->get_count() - 1) index = 0;
+		if (KEY('V') || view_state[index] == false)
 		{
 			index++;
 			Sleep(350);
 			continue;
 		}
 
-		view[index]->processing();
+		view[0]->acquire();
+
+		view[0]->set_processing(0);
+		view[0]->processing();
+
+		view[0]->set_processing(1);
+		view[0]->track_object();
+
+		view[0]->set_processing(3);
+		view[0]->processing();
+
+		//view[0]->set_processing(4);
+		//view[0]->processing();
+
+		//view[0]->set_processing(5);
+		//view[0]->processing();
+
 		view[index]->view();
 
 		pt11.manual_set(pw_l, pw_r, pw_laser, laser);
 
 		tc = high_resolution_time() - tc0;
-
 
 		set_inputs(pw_l,pw_r,pw_laser,laser,
 			light,light_gradient,light_dir,image_noise,
