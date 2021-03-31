@@ -28,6 +28,8 @@ public:
 	void calculate_HSV(int R, int G, int B, double& hue, double& sat, double& value);
 	void calculate_hue_image(image& rgb, image& hue_image);
 	void save_hue();
+	double get_ic() { return ic; }
+	double get_jc() { return jc; }
 
 	int label_objects();
 	int select_object();

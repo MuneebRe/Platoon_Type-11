@@ -113,8 +113,8 @@ int main()
 	// set initial inputs / on-line adjustable parameters /////////	
 
 	// inputs
-	pw_l = 1250; // pulse width for left wheel servo (us)
-	pw_r = 2000; // pulse width for right wheel servo (us)
+	pw_l = 1500; // pulse width for left wheel servo (us)
+	pw_r = 1500; // pulse width for right wheel servo (us)
 
 	pw_laser = 1500; // pulse width for laser servo (us)
 	laser = 0; // laser input (0 - off, 1 - fire)
@@ -135,8 +135,8 @@ int main()
 		max_speed,opponent_max_speed);
 
 	// opponent inputs
-	pw_l_o = 1300; // pulse width for left wheel servo (us)
-	pw_r_o = 1600; // pulse width for right wheel servo (us)
+	pw_l_o = 1500; // pulse width for left wheel servo (us)
+	pw_r_o = 1500; // pulse width for right wheel servo (us)
 	pw_laser_o = 1500; // pulse width for laser servo (us)
 	laser_o = 0; // laser input (0 - off, 1 - fire)
 
@@ -154,6 +154,9 @@ int main()
 	// the image and fire the laser
 
 	int index = 0;
+
+	int pt_i[4];
+	int pt_j[4];
 
 	int view_state[3] = { true, false, false };
 
@@ -201,9 +204,22 @@ int main()
 		//view[0]->set_processing(5);
 		//view[0]->processing();
 
-		view[0]->set_processing(6);
+		view[0]->set_processing(0);
 		view[0]->processing();
 
+		for (int i = 6; i < 10; i++)
+		{
+			view[0]->set_processing(i);
+			view[0]->processing();
+			pt_i[i-6] = view[0]->get_ic();
+			pt_j[i-6] = view[0]->get_jc();
+		}
+
+		for (int i = 0; i < 4; i++)
+		{
+			draw_point_rgb(view[0]->return_image(), pt_i[i], pt_j[i], 0, 0, 255);
+		}
+		
 		view[index]->view();
 
 		pt11.manual_set(pw_l, pw_r, pw_laser, laser);

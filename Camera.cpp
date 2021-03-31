@@ -1,6 +1,6 @@
 #define KEY(c) ( GetAsyncKeyState((int)(c)) & (SHORT)0x8000 )
-using namespace std;
 
+using namespace std;
 
 #include <cstdio>
 #include <cstdlib>
@@ -126,8 +126,16 @@ void Camera::processing()
 		copy(a, rgb);
 		break;
 	case 6:				//Centroid from Hue test
-		copy(original, rgb);
-		hue_filter(0, 8, 0.6, 1.0, 150, 255);
+		hue_filter(4, 6, 0.6, 0.7, 150, 250);			//Red Filter
+		break;
+	case 7:
+		hue_filter(20, 40, 0.4, 0.6, 200, 260);		//Orange filter
+		break;
+	case 8:
+		hue_filter(145, 165, 0.5, 0.65, 170, 185);	//Green Filter
+		break;
+	case 9:
+		hue_filter(190, 210, 0.7, 0.85, 218, 235);		//Blue Filter
 		break;
 	}
 	
@@ -185,9 +193,12 @@ int Camera::select_object()
 	// select an object from a binary image
 // a - image
 // b - temp. image
-	{
 		i2byte* pl;
 		int i, j;
+
+		ibyte R, G, B;
+		ibyte* p, * pc;
+		double hue, sat, value;
 
 		// start in the image
 		i = 200;
@@ -202,6 +213,20 @@ int Camera::select_object()
 			// acquire image
 			acquire_image_sim(rgb);
 
+			//REFERENCE MUNEEB
+			p = rgb.pdata;
+
+			int k = i + width * j;
+			pc = p + 3 * k; // pointer to the kth pixel (3 bytes/pixel)
+
+			B = *pc;
+			G = *(pc + 1);
+			R = *(pc + 2);
+
+			if(KEY('H'))calculate_HSV(R, G, B, hue, sat, value);
+
+			cout << "Hue: " << hue << "\tSat: " << sat << "\tVal: " << value << endl;
+
 			// label objects
 			t_value = 100;
 			label_objects();
@@ -209,6 +234,7 @@ int Camera::select_object()
 			copy(a, b); // threshold image is in a
 			draw_point(b, i, j, 128); // draw the new point
 			copy(b, rgb);
+
 
 			draw_point_rgb(rgb, i, j, 0, 0, 255);
 			draw_point_rgb(rgb, 320, 240, 0, 255, 0);
@@ -237,7 +263,7 @@ int Camera::select_object()
 		nlabel = *(pl + j * label.width + i);
 
 		return 0; // no errors
-	}
+	
 }
 
 int Camera::search_object(int is, int js)
@@ -498,7 +524,7 @@ void Camera::hue_filter(double min_hue, double max_hue, double min_sat, double m
 
 	p = rgb.pdata;
 
-	copy(original, rgb);
+	//copy(original, rgb);
 
 	for (int j = 0; j < height; j++) { // j coord
 
@@ -550,7 +576,7 @@ void Camera::hue_filter(double min_hue, double max_hue, double min_sat, double m
 	ic = mi / (m + eps);
 	jc = mj / (m + eps);
 
-	draw_point_rgb(rgb, ic, jc, 0, 255, 0);
+	//draw_point_rgb(rgb, ic, jc, 0, 255, 0);
 
 	cout << "\n ic = " << ic << " , jc = " << jc << endl;
 }
