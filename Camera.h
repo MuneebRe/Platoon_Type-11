@@ -35,7 +35,8 @@ public:
 	int track_object();
 	int search_object(int is, int js);
 
-	void Camera::red_filter();
+	void red_filter();
+	void hue_filter(double min_hue, double max_hue, double min_sat, double max_sat, double min_val, double max_val);
 
 	~Camera();
 };

@@ -21,3 +21,7 @@
 .vs/program/v16/.suo
 *.db
 .vs/program/v16/Browse.VC.db
+*.exe
+.vs/program/v16/Browse.VC.db
+.vs/program/v16/.suo
+Debug/program.exe

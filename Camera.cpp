@@ -1,6 +1,7 @@
 #define KEY(c) ( GetAsyncKeyState((int)(c)) & (SHORT)0x8000 )
 using namespace std;
 
+
 #include <cstdio>
 #include <cstdlib>
 #include <cmath>
@@ -123,6 +124,10 @@ void Camera::processing()
 		calculate_hue_image(rgb, a);
 		save_hue();
 		copy(a, rgb);
+		break;
+	case 6:				//Centroid from Hue test
+		copy(original, rgb);
+		hue_filter(0, 8, 0.6, 1.0, 150, 255);
 		break;
 	}
 	
@@ -478,4 +483,74 @@ void Camera::save_hue()
 	}
 	fclose(fp);
 
+}
+
+void Camera::hue_filter(double min_hue, double max_hue, double min_sat, double max_sat, double min_val, double max_val)
+{
+	// always initialize summation variables
+	double mi, mj, m, eps;
+	mi = mj = m = 0.0;
+	eps = 1.0e-10;
+	int k;
+	ibyte R, G, B;
+	ibyte* p, * pc;
+	double hue, sat, value;
+
+	p = rgb.pdata;
+
+	copy(original, rgb);
+
+	for (int j = 0; j < height; j++) { // j coord
+
+		for (int i = 0; i < width; i++) { // i coord
+
+			k = i + width * j;
+			pc = p + 3 * k; // pointer to the kth pixel (3 bytes/pixel)
+
+			B = *pc;
+			G = *(pc + 1);
+			R = *(pc + 2);
+
+			calculate_HSV(R, G, B, hue, sat, value);
+
+			// find blue pixels and calculate their centroid stats //8 0.6 0.6
+			if ((hue < max_hue) && (hue >= min_hue) && (sat >= min_sat) && (sat < max_sat) && (value < max_val) && (value >= min_val)) {
+			//if (hue < 8 && hue > 0 && sat > 0.6 && sat < 1.0 && value > 150 && value < 255) {
+				R = 255;
+				G = 255;
+				B = 255;
+
+				// highlight blue pixels in the image
+				*(pc + 0) = B;
+				*(pc + 1) = G;
+				*(pc + 2) = R;
+
+				// to calculate the centroid you need to calculate mk 
+				// - the mass of each pixel k
+
+				// mk = volume * density
+				// mk = (pixel area) * (blue intensity)
+				// mk = (blue intensity) = B
+				// since (pixel area) = 1 pixel x 1 pixel = 1
+
+				// calculate total mass m = sum (mk)
+				m += B;
+
+				// calculate total moments in the i and j directions
+				mi += i * B; // (i moment of mk) = mk * i
+				mj += j * B; // (j moment of mk) = mk * j
+
+			} // end if
+
+		} // end for i
+
+	} // end for j
+
+	eps = 1.0e-10; // small constant to protect against /0
+	ic = mi / (m + eps);
+	jc = mj / (m + eps);
+
+	draw_point_rgb(rgb, ic, jc, 0, 255, 0);
+
+	cout << "\n ic = " << ic << " , jc = " << jc << endl;
 }

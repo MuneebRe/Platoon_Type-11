@@ -201,6 +201,9 @@ int main()
 		//view[0]->set_processing(5);
 		//view[0]->processing();
 
+		view[0]->set_processing(6);
+		view[0]->processing();
+
 		view[index]->view();
 
 		pt11.manual_set(pw_l, pw_r, pw_laser, laser);
