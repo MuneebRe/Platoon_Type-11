@@ -3,7 +3,7 @@
 class Camera
 {
 private:
-	image rgb, a, b, original, label;
+	image rgb, a, b, original, label, mag, theta;
 	i2byte nlabel;
 	int cam_number, width, height, type;
 	bool state, is_simulator;
@@ -39,6 +39,8 @@ public:
 
 	void red_filter();
 	void hue_filter(double min_hue, double max_hue, double min_sat, double max_sat, double min_val, double max_val);
+
+	int sobel(image& a, image& mag, image& theta);
 
 	~Camera();
 };

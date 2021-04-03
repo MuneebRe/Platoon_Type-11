@@ -38,46 +38,60 @@ Camera::Camera(bool state, int cam_number, int width, int height, int type, bool
 	ic = 200.0;
 	jc = 300.0;
 
-	if (is_simulator != true)
+	if (state != false)
 	{
-		activate_camera(cam_number, height, width);	// activate camera
+		if (is_simulator != true)
+		{
+			activate_camera(cam_number, height, width);	// activate camera
+		}
+
+		rgb.width = width;
+		rgb.height = height;
+		rgb.type = type;
+
+		original.width = width;
+		original.height = height;
+		original.type = type;
+
+		a.type = GREY_IMAGE;
+		a.width = width;
+		a.height = height;
+
+		b.type = GREY_IMAGE;
+		b.width = width;
+		b.height = height;
+
+		label.type = LABEL_IMAGE;
+		label.width = width;
+		label.height = height;
+
+		mag.type = GREY_IMAGE;
+		mag.width = width;
+		mag.height = height;
+
+		theta.type = GREY_IMAGE;
+		theta.width = width;
+		theta.height = height;
+
+		allocate_image(original);
+		allocate_image(rgb);
+		allocate_image(a);
+		allocate_image(b);
+		allocate_image(label);
+		allocate_image(mag);
+		allocate_image(theta);
+
+		
 	}
-
-	rgb.width = width;
-	rgb.height = height;
-	rgb.type = type;
-
-	original.width = width;
-	original.height = height;
-	original.type = type;
-
-	a.type = GREY_IMAGE;
-	a.width = width;
-	a.height = height;
-
-	b.type = GREY_IMAGE;
-	b.width = width;
-	b.height = height;
-
-	label.type = LABEL_IMAGE;
-	label.width = width;
-	label.height = height;
-
-	allocate_image(original);
-	allocate_image(rgb);
-	allocate_image(a);
-	allocate_image(b);
-	allocate_image(label);
-
 	count++;
 }
 
 void Camera::acquire()
 {
-	if (state == false) return;
+	if (state == false) return;		//If the camera is disabled, do nothing
 
-	if (is_simulator == true)
-	{
+	if (is_simulator == true)		//If it's a simulator, use the simulator image function
+	{								//If it's a camera, use the camera function
 		acquire_image_sim(rgb);
 	}
 	else
@@ -120,23 +134,28 @@ void Camera::processing()
 		red_filter();
 		break;
 	case 5:
-		copy(original, rgb);
-		calculate_hue_image(rgb, a);
-		save_hue();
-		copy(a, rgb);
+		copy(original, rgb);				//Bring back the original to the rgb
+		calculate_hue_image(rgb, a);		//Calculate the hue for each element
+		save_hue();							//Save it in a .csv file
+		copy(a, rgb);						//Bring it back to the rgb image
 		break;
 	case 6:				//Centroid from Hue test
-		hue_filter(4, 6, 0.6, 0.7, 150, 250);			//Red Filter
+		hue_filter(2, 9, 0.55, 0.75, 150, 250);			//Red Filter
 		break;
 	case 7:
 		hue_filter(20, 40, 0.4, 0.6, 200, 260);		//Orange filter
 		break;
 	case 8:
-		hue_filter(145, 165, 0.5, 0.65, 170, 185);	//Green Filter
+		hue_filter(145, 165, 0.5, 0.70, 170, 190);	//Green Filter
 		break;
 	case 9:
 		hue_filter(190, 210, 0.7, 0.85, 218, 235);		//Blue Filter
 		break;
+	case 10:
+		copy(original, rgb);
+		copy(rgb, a);
+		sobel(a, mag, theta);
+		copy(theta, rgb);
 	}
 	
 }
@@ -155,9 +174,11 @@ Camera::~Camera()
 	free_image(b);
 	free_image(original);
 	free_image(label);
+	free_image(mag);
+	free_image(theta);
 }
 
-int Camera::label_objects()
+int Camera::label_objects()		//Mostly code from the lecture, but used processing() so it's custom.
 {
 	int nlabels;
 
@@ -170,7 +191,7 @@ int Camera::label_objects()
 	return 0; // no errors
 }
 
-int Camera::find_object()
+int Camera::find_object()		//Code from lecture, but edited
 {
 	cout << "\npress space to get an image";
 	pause();
@@ -188,7 +209,7 @@ int Camera::find_object()
 	return 0; // no errors
 }
 
-int Camera::select_object()
+int Camera::select_object()		//Code from lecture, combined tracking with RGB to HSV functionality
 {
 	// select an object from a binary image
 // a - image
@@ -198,7 +219,9 @@ int Camera::select_object()
 
 		ibyte R, G, B;
 		ibyte* p, * pc;
-		double hue, sat, value;
+		static double hue = 0;
+		static double sat = 0;
+		static double value = 0;
 
 		// start in the image
 		i = 200;
@@ -211,7 +234,8 @@ int Camera::select_object()
 		while (1) {
 
 			// acquire image
-			acquire_image_sim(rgb);
+			//acquire_image_sim(rgb);
+			acquire();
 
 			//REFERENCE MUNEEB
 			p = rgb.pdata;
@@ -266,7 +290,7 @@ int Camera::select_object()
 	
 }
 
-int Camera::search_object(int is, int js)
+int Camera::search_object(int is, int js)		//Code from lecture
 // search for a labeled object in an outward spiral pattern
 // and inital search location (is,js)
 // *** Please study this function carefully
@@ -314,7 +338,7 @@ int Camera::search_object(int is, int js)
 }
 
 
-int Camera::track_object()
+int Camera::track_object()           //Code from lecture
 {
 
 	cout << "\n\nnow tracking the object.";
@@ -339,7 +363,7 @@ int Camera::track_object()
 	return 0;
 }
 
-void Camera::red_filter()
+void Camera::red_filter()		//Copy from the "find blue image centroid" assignment
 {
 	// always initialize summation variables
 	double mi, mj, m, eps;
@@ -406,7 +430,7 @@ void Camera::red_filter()
 	cout << "\n ic = " << ic << " , jc = " << jc << endl;
 }
 
-void Camera::calculate_hue_image(image& rgb, image& hue_image)
+void Camera::calculate_hue_image(image& rgb, image& hue_image)		//Convert rgb to hue image
 {
 	int i, j, k;
 	ibyte* p; // pointer to colour components in the rgb image
@@ -448,7 +472,7 @@ void Camera::calculate_hue_image(image& rgb, image& hue_image)
 }
 
 
-void Camera::calculate_HSV(int R, int G, int B, double& hue, double& sat, double& value)
+void Camera::calculate_HSV(int R, int G, int B, double& hue, double& sat, double& value)  //Lecture
 {
 	int max, min, delta;
 	double H;
@@ -491,7 +515,7 @@ void Camera::calculate_HSV(int R, int G, int B, double& hue, double& sat, double
 
 }
 
-void Camera::save_hue()
+void Camera::save_hue()				//Also from his lecture
 {
 	int nhist;
 	double hist[255], hmin, hmax, x;
@@ -512,7 +536,8 @@ void Camera::save_hue()
 }
 
 void Camera::hue_filter(double min_hue, double max_hue, double min_sat, double max_sat, double min_val, double max_val)
-{
+{	//Re-made the "find blue object centroid" assignment but with HSV range 
+
 	// always initialize summation variables
 	double mi, mj, m, eps;
 	mi = mj = m = 0.0;
@@ -579,4 +604,147 @@ void Camera::hue_filter(double min_hue, double max_hue, double min_sat, double m
 	//draw_point_rgb(rgb, ic, jc, 0, 255, 0);
 
 	cout << "\n ic = " << ic << " , jc = " << jc << endl;
+}
+
+
+int Camera::sobel(image& a, image& mag, image& theta)	//Full copy paste from the lecture material
+{
+	i4byte size, i, j;
+	ibyte* pa, * pa1, * pa2, * pa3, * pa4, * pa5, * pa6, * pa7, * pa8, * pa9;
+	ibyte* p_mag, * p_theta;
+	i2byte width, height;
+
+	// note we use a signed in here since sx, sy could be < 0
+	int sx, sy, M;
+	int kx[10], ky[10];
+	double A;
+
+	// check for compatibility image sizes and types
+	if (a.height != mag.height || a.width != mag.width ||
+		a.height != theta.height || a.width != theta.width)
+	{
+		printf("\nerror in convolution: sizes images are not the same!");
+		return 1;
+	}
+
+	if (a.type != GREY_IMAGE || mag.type != GREY_IMAGE
+		|| theta.type != GREY_IMAGE)
+	{
+		printf("\nerror in convolution: input types are not valid!");
+		return 1;
+	}
+
+	width = a.width;
+	height = a.height;
+
+	// initialize pointers
+	pa = a.pdata + width + 1;
+	p_mag = mag.pdata + width + 1;
+	p_theta = theta.pdata + width + 1;
+
+	// set neighbourhood pointers
+
+	// make sure they don't point outside of the images at the boundaries
+	// when you use them
+
+	// note the order of the neighbourhood is correctly given below
+	// as discussed in class (the old order was for a different
+	// image coord system in an older version of the library).
+	// pa7 pa8 pa9
+	// pa4 pa5 pa6
+	// pa1 pa2 pa3
+	pa1 = pa - width - 1;
+	pa2 = pa - width;
+	pa3 = pa - width + 1;
+	pa4 = pa - 1;
+	pa5 = pa;
+	pa6 = pa + 1;
+	pa7 = pa + width - 1;
+	pa8 = pa + width;
+	pa9 = pa + width + 1;
+
+	// number of pixels to process
+	size = (i4byte)a.width * a.height - 2 * width - 2;
+
+	// set convolution coefficients for sx and sy
+	// k7 k8 k9
+	// k4 k5 k6
+	// k1 k2 k3
+	kx[7] = -1; kx[8] = 0; kx[9] = 1;
+	kx[4] = -2; kx[5] = 0; kx[6] = 2;
+	kx[1] = -1; kx[2] = 0; kx[3] = 1;
+
+	ky[7] = 1;  ky[8] = 2;  ky[9] = 1;
+	ky[4] = 0;  ky[5] = 0;  ky[6] = 0;
+	ky[1] = -1; ky[2] = -2; ky[3] = -1;
+
+	// calculate sx and sy
+	// here I calculate both at the same time in the loop
+	// since I don't want to store them into an image array
+	// (they can't store negative numbers which might occur for sx
+	// and sy) and I need both to calculate mag and theta.
+	for (i = 0; i < size; i++) {
+
+		sx = kx[1] * (*pa1) + kx[2] * (*pa2) + kx[3] * (*pa3) +
+			kx[4] * (*pa4) + kx[5] * (*pa5) + kx[6] * (*pa6) +
+			kx[7] * (*pa7) + kx[8] * (*pa8) + kx[9] * (*pa9);
+
+		sy = ky[1] * (*pa1) + ky[2] * (*pa2) + ky[3] * (*pa3) +
+			ky[4] * (*pa4) + ky[5] * (*pa5) + ky[6] * (*pa6) +
+			ky[7] * (*pa7) + ky[8] * (*pa8) + ky[9] * (*pa9);
+
+		// might consider directly substituting kx, ky above
+		// to reduce computation time
+
+		// calculate mag and theta
+		M = abs(sx) + abs(sy); // fast approx of sqrt(sx*sx + sy*sy)
+
+		if (M > 255) M = 255; // check for overflow
+		// alternatively M can be scaled by 1/2, 1/4, 1/8
+		// to reduce (1/2) or avoid (1/8) possibility of overlow
+
+		*p_mag = M;
+
+		A = atan2((double)sy, (double)sx) / 3.14159 * 180; // deg
+		// note that A ranges from -180 to 180 deg
+
+		// scale A so that it ranges from 0 to 255
+		// and will fit in a greyscale image range
+		// -- add 0.01 to account for roundoff error
+		A = (A + 180) / 360 * 255 + 0.01;
+
+		*p_theta = (int)A;
+
+		// note this line might be useful to cut down
+		// on the noise / irrelevant info from theta
+		if (M < 75) *p_theta = 0;
+
+		// increment pointers
+		pa1++; pa2++; pa3++; pa4++; pa5++;
+		pa6++; pa7++; pa8++; pa9++;
+		p_mag++, p_theta++;
+	}
+
+	// copy edges of image from valid regions
+	p_mag = mag.pdata;
+	p_theta = theta.pdata;
+
+	// number of pixels
+	size = (i4byte)a.width * a.height;
+
+	for (i = 0; i < width; i++) {
+		p_mag[i] = p_mag[i + width]; // bottom
+		p_mag[size - i - 1] = p_mag[size - i - 1 - width]; // top
+		p_theta[i] = p_theta[i + width]; // bottom
+		p_theta[size - i - 1] = p_theta[size - i - 1 - width]; // top
+	}
+
+	for (i = 0, j = 0; i < height; i++, j += width) {
+		p_mag[j] = p_mag[j + 1]; // left
+		p_mag[size - j - 1] = p_mag[size - j - 2]; // right
+		p_theta[j] = p_theta[j + 1]; // left
+		p_theta[size - j - 1] = p_theta[size - j - 2]; // right
+	}
+
+	return 0;
 }

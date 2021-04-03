@@ -153,50 +153,50 @@ int main()
 	// in addition, you can set the robot inputs to move it around
 	// the image and fire the laser
 
-	int index = 0;
+	int index = 0;	//Used for switching cameras
 
-	int pt_i[4];
-	int pt_j[4];
+	int pt_i[4];	//x Point locations of the "colored" parts of both robots
+	int pt_j[4];	//y Point locations of the "colored" parts of both robots
 
-	int view_state[3] = { true, false, false };
+	int view_state[3] = { true, true, false };	//Defines if enabled/disabled Simulator, Top View Cam, First Person Cam
 
 	Camera* view[3];
-	view[0] = new Camera(view_state[0], 0, 640, 480, RGB_IMAGE, true, 1);	 //Simulator
-	view[1] = new Camera(view_state[1], 1, 640, 480, RGB_IMAGE, false, 0);	 //Top View Camera
-	view[2] = new Camera(view_state[2], 0, 640, 480, RGB_IMAGE, false, 0);  //Laptop Webcam *to become 1 first person view
+	view[0] = new Camera(view_state[0], 0, 640, 480, RGB_IMAGE, true, 1);	 //Simulator		   (sim)
+	view[1] = new Camera(view_state[1], 0, 640, 480, RGB_IMAGE, false, 0);	 //Top View Camera	   (real)
+	view[2] = new Camera(view_state[2], 0, 640, 480, RGB_IMAGE, false, 0);   //First Person Camera (real)
 
-	Serial port(false, "COM12", 1);
+	Serial port(false, "COM12", 1);		//Establish bluetooth communication with robot (real)
 
-	PT11 pt11;
+	PT11 pt11;		//Make instance of robot (sim)
 
 	// measure initial clock time
 	tc0 = high_resolution_time(); 
 
 	
-	view[0]->find_object();
+	view[0]->find_object();    //Testing for "tracking" lecture, pick a white spot. Press 'c' to select.
 
 	while(1) {
 
-		port.send(0, 0, 0, 0);
+		port.send(0, 0, 0, 0);		//Send control order to robot (real)
 
-		if (index > view[0]->get_count() - 1) index = 0;
-		if (KEY('V') || view_state[index] == false)
-		{
+		if (index > view[0]->get_count() - 1) index = 0;	//Roll back view number
+		if (KEY('V') || view_state[index] == false)			//*Only used if using real camera
+		{													//*Changes views
 			index++;
 			Sleep(350);
 			continue;
 		}
 
-		view[0]->acquire();
+		view[index]->acquire();					//Get RGB image
 
-		view[0]->set_processing(0);
-		view[0]->processing();
+		view[0]->set_processing(0);			//Set and Prep for original copy
+		view[0]->processing();				//Make a copy of the rgb image
 
-		view[0]->set_processing(1);
-		view[0]->track_object();
+		view[0]->set_processing(1);			//Prepare rgb image for process used to keep tracking
+		view[0]->track_object();			//Track object selected from view[0]->find_object();
 
-		view[0]->set_processing(3);
-		view[0]->processing();
+		view[0]->set_processing(3);			//Copy original image to current rgb image
+		view[0]->processing();				//Also, add a point to the "tracked" object
 
 		//view[0]->set_processing(4);
 		//view[0]->processing();
@@ -204,25 +204,31 @@ int main()
 		//view[0]->set_processing(5);
 		//view[0]->processing();
 
-		view[0]->set_processing(0);
-		view[0]->processing();
+		view[0]->set_processing(0);			//Set and Prep for original copy
+		view[0]->processing();				//Make a copy of the rgb image
 
 		for (int i = 6; i < 10; i++)
 		{
-			view[0]->set_processing(i);
-			view[0]->processing();
-			pt_i[i-6] = view[0]->get_ic();
-			pt_j[i-6] = view[0]->get_jc();
+			view[0]->set_processing(i);		//Run filter for blue, orange, green and red
+			view[0]->processing();			//to find centroid location for each
+			pt_i[i-6] = view[0]->get_ic();	//And put them in this array
+			pt_j[i-6] = view[0]->get_jc();	//For each color
 		}
 
 		for (int i = 0; i < 4; i++)
 		{
-			draw_point_rgb(view[0]->return_image(), pt_i[i], pt_j[i], 0, 0, 255);
+			draw_point_rgb(view[0]->return_image(), pt_i[i], pt_j[i], 0, 0, 255); //Call back array and draw point at those locations
 		}
-		
-		view[index]->view();
 
-		pt11.manual_set(pw_l, pw_r, pw_laser, laser);
+		view[0]->set_processing(0);			//Set and Prep for original copy
+		view[0]->processing();				//Make a copy of the rgb image
+
+		view[0]->set_processing(10);		//Prep for sobel imagery
+		view[0]->processing();				//Do sobel imagery
+
+		view[index]->view();	//View the the processed image
+		
+		pt11.manual_set(pw_l, pw_r, pw_laser, laser);		//Control the bot. A W D for laser, arrows for bot
 
 		tc = high_resolution_time() - tc0;
 
