@@ -250,10 +250,8 @@ int acquire_image_sim(image &rgb)
 // assume this function is called frequenlty since it performs
 // real-time simulation of the robots
 {
-	int i, j, k;
-	double x, y, theta;
-	int ic, jc;
-	
+	int k;
+	double x, y, theta, ia, ja, ib, jb;
 	static int init = 0;
 	static double tc0;
 	double tc;
@@ -376,22 +374,19 @@ int acquire_image_sim(image &rgb)
 	// add obstacles to image /////////////////
 	
 	// obstacle image center point
-	ic = rgb_obstacle.width / 2;
-	jc = rgb_obstacle.height / 2;	
+	ia = 0.5*rgb_obstacle.width;
+	ja = 0.5*rgb_obstacle.height;	
 	
 	for(k=1;k<=S1->N_obs;k++) {
+
 		// get pixel location of obstacle center
-		i = (int)S1->x_obs[k];
-		j = (int)S1->y_obs[k];
-		
-		// calculate bottom left corner of image in global coord
-		i -= ic;
-		j -= jc;		
-		
-		// place obstacle at point (i,j)
-		append(rgb,rgb_obstacle,i,j);
-		
-//		S1->size_obs[i];
+		ib = S1->x_obs[k];
+		jb = S1->y_obs[k];
+	
+		theta = 0.0;
+		draw_image(rgb_obstacle,theta,ia,ja,rgb_background,ib,jb,rgb);
+
+//		TODO: add scaling to draw_image S1->size_obs[i];
 	}
 
 	// add opponent to image ///////////////////
@@ -403,23 +398,14 @@ int acquire_image_sim(image &rgb)
 		y 	  = S1->P[2]->x[3] - S1->P[2]->ya;
 	
 		// opponent image center point
-		ic = rgb_opponent.width / 2;
-		jc = rgb_opponent.height / 2;
+		ia = 0.5*rgb_opponent.width;
+		ja = 0.5*rgb_opponent.height;
 	
 		// get pixel location of opponent center
-		i = (int)x;
-		j = (int)y;	
-		
-		// calculate bottom left corner of image in global coord
-		i -= ic;
-		j -= jc;
+		ib = x;
+		jb = y;
 
-		// rotate opponent image around image center point by theta	
-		rotate(rgb_opponent,rgb_opponent_r,rgb_background,theta,i,j);
-
-		// place opponent at point (i,j)
-		append(rgb,rgb_opponent_r,i,j);
-		
+		draw_image(rgb_opponent,theta,ia,ja,rgb_background,ib,jb,rgb);
 	}
 	
 	// add robot to image //////////////////////
@@ -429,24 +415,16 @@ int acquire_image_sim(image &rgb)
 	y 	  = S1->P[1]->x[3] - S1->P[1]->ya;
 	
 	// robot image center point
-	ic = rgb_robot.width / 2;
-	jc = rgb_robot.height / 2;
+	ia = 0.5*rgb_robot.width;
+	ja = 0.5*rgb_robot.height;
 	
 	// get pixel location of robot center
-	i = (int)x;
-	j = (int)y;		
-		
-	// calculate bottom left corner of image in global coord
-	i -= ic;
-	j -= jc;
+	ib = x;
+	jb = y;		
 
 //	theta = 3.14159/4; // for testing
 
-	// rotate robot image around image center point by theta	
-	rotate(rgb_robot,rgb_robot_r,rgb_background,theta,i,j);
-
-	// place robot at point (i,j)
-	append(rgb,rgb_robot_r,i,j);
+	draw_image(rgb_robot,theta,ia,ja,rgb_background,ib,jb,rgb);
 
 	// for testing /////////////
 /*
@@ -509,22 +487,27 @@ int acquire_image_sim(image &rgb)
 }
 
 
-int rotate(image &a, image &b, image &c, double theta, int ig, int jg)
+int draw_image(image &a, double theta, double ia, double ja, 
+			   image &b, double ib, double jb, image &output)
 {
 	int i, j, k, R, G, B;
-	int width, height;
-	ibyte *pa, *pb, *pc;
-	double i_l, j_l; // local coord for i,j
-	double ic, jc;
+	ibyte *pa, *pb, *pout;
+	double iL, jL; // local coord
+	double ic, jc; // image center coord
 	double cos_th, sin_th;
-	int i1, j1, i2, j2;
-	int sum, width_c, height_c;
+	int i1, j1, i2, j2, sum;
 	
 	// variables for bilinear interpolation
 	ibyte *p1, *p2, *p3, *p4;
 	int B1, G1, R1, B2, G2, R2, B3, G3, R3, B4, G4, R4;	
 	double Ba, Ga, Ra, Bb, Gb, Rb, ip, jp;
 	int flag;
+
+	int width_a, height_a, width_b, height_b, width_out, height_out;
+	int imin, imax, jmin, jmax;
+	double wl_imin, wl_imax, wl_jmin, wl_jmax;
+	double wg_imin, wg_imax, wg_jmin, wg_jmax;
+	double wl_i[5], wl_j[5], wg_i[5], wg_j[5];
 
 	// TODO: add #define DEBUG which checks bounds
 
@@ -533,38 +516,67 @@ int rotate(image &a, image &b, image &c, double theta, int ig, int jg)
 	cos_th = cos(theta);
 	sin_th = sin(theta);
 	
-	pa = a.pdata;
-	pb = b.pdata;	
-	pc = c.pdata;
+	pa	 = a.pdata;
+	pb	 = b.pdata;	
+	pout = output.pdata;
 	
-	// width of object images a and b
-	width = b.width;
-	height = b.height;
-	
-	// width of background image c
-	width_c = c.width;
-	height_c = c.height;	
-	
-	// erase output image
-	R = 0; G = 0; B = 0;
-	for(j=0;j<height;j++) {		
-		for(i=0;i<width;i++) {
-			*pb		= B;
-			*(pb+1) = G;
-			*(pb+2) = R;
-			pb += 3; // move to next pixel in output image
-		}
+	// TODO: check background and b have same size
+
+	width_a = a.width;
+	height_a = a.height;	
+	width_b = width_out = output.width;
+	height_b = height_out = output.height;
+
+	// TODO: check for special case of abs(theta) < 1.0e-7
+	// to speedup and reduce roundoff error
+
+	// find arrays that describle the pixels in rotated window of image a
+
+	// image a window in local coord
+	wl_imin = 0.0 - ia;
+	wl_imax = width_a - 1.0 - ia;
+	wl_jmin = 0.0 - ja;
+	wl_jmax = height_a - 1.0 - ja;
+
+	wl_i[1] = wl_imin; wl_j[1] = wl_jmin;
+	wl_i[2] = wl_imax; wl_j[2] = wl_jmin;
+	wl_i[3] = wl_imin; wl_j[3] = wl_jmax;
+	wl_i[4] = wl_imax; wl_j[4] = wl_jmax;
+
+	// image a window in global coord -- fully envelopes rotated window
+	wg_imin = 1.0e7; wg_imax = -1.0e7;
+	wg_jmin = 1.0e7; wg_jmax = -1.0e7;
+
+	for(k=1;k<=4;k++) {
+		wg_i[k] = cos_th * wl_i[k] - sin_th * wl_j[k] + ib;
+		wg_j[k] = sin_th * wl_i[k] + cos_th * wl_j[k] + jb;
+		if( wg_i[k] > wg_imax ) wg_imax = wg_i[k];
+		if( wg_i[k] < wg_imin ) wg_imin = wg_i[k];
+		if( wg_j[k] > wg_jmax ) wg_jmax = wg_j[k];
+		if( wg_j[k] < wg_jmin ) wg_jmin = wg_j[k];
 	}
-	
-	// initialize pb for next step
-	pb = b.pdata;	
-	
-	// calculate each pixel in output image by linear interpolation
+
+	// convert to int making sure to cover any fraction
+	imin = (int)wg_imin;
+	imax = (int)(wg_imax + 1 - 1.0e-10);
+	jmin = (int)wg_jmin;
+	jmax = (int)(wg_jmax + 1 - 1.0e-10);
+
+	// correct if global window is out of bounds
+	if( imin < 0 ) imin = 0;
+	if( imax > width_out-1 ) imax = width_out-1;
+	if( jmin < 0 ) jmin = 0;
+	if( jmax > height_out-1 ) jmax = height_out-1;
+
+	// TODO check for imin > width_out - 1, etc. ?
+	// -- for loops are protected 
+
+	// calculate each pixel in output image using linear interpolation
 	// with respect to original image
-	for(j=0;j<height;j++) {		
+	for(j=jmin;j<=jmax;j++) {		
 	
-		for(i=0;i<width;i++) {
-			
+		for(i=imin;i<=imax;i++) {
+		
 			// calculate local coord il, jl
 			// pg = R*pl,  pg = [i,j], pl = [il,jl]	
 			// pl = inv(R)*pg = Rt*pg
@@ -574,34 +586,22 @@ int rotate(image &a, image &b, image &c, double theta, int ig, int jg)
 			//      [-sin(th) cos(th)]
 			
 			// center coords
-			ic = i - 0.5*width;
-			jc = j - 0.5*height;
-			
-			i_l =  cos_th*ic + sin_th*jc;
-			j_l = -sin_th*ic + cos_th*jc;
-			
-			i1 = (int)(i_l + 0.5*width);
+			ic = i - ib;
+			jc = j - jb;
+		
+			// convert global to local coord
+			iL =  cos_th*ic + sin_th*jc;
+			jL = -sin_th*ic + cos_th*jc;
+
+			i1 = (int)(iL + ia);
 			i2 = i1 + 1;
 			
-			j1 = (int)(j_l + 0.5*height);
+			j1 = (int)(jL + ja);
 			j2 = j1 + 1;			
-			
-			// check if (i1,j1), etc. are within range
-			if( (i1 > 3) && (i1 < width-3) && 
-				(j1 > 3) && (j1 < height-3) ) {
-					
-/*		
-			// simple interpolation -- use (i1,j1) ///////////
-				
-			// byte k for pixel (i1,j1)
-			k = 3*( j1*width + i1 );
-			
-			B = pa[k];
-			G = pa[k+1];
-			R = pa[k+2];
-			
-			////////////////////////////////////////////////
-*/			
+
+			// check if (i1,j1), etc. are within range of image a
+			if( (i1 >= 0) && (i1 < width_a-1) && 
+				(j1 >= 0) && (j1 < height_a-1) ) {		
 
 			// bilinear interpolation ///////////////////////
 
@@ -610,10 +610,10 @@ int rotate(image &a, image &b, image &c, double theta, int ig, int jg)
 			// p1 p2
 			
 			// TODO: remove i,j calcs and use small increments like conv
-			p1 = pa + 3*( j1*width + i1 ); // (i1,j1)			
-			p2 = pa + 3*( j1*width + i2 ); // (i2,j1)
-			p3 = pa + 3*( j2*width + i1 ); // (i1,j2)
-			p4 = pa + 3*( j2*width + i2 ); // (i2,j2)
+			p1 = pa + 3*( j1*width_a + i1 ); // (i1,j1)			
+			p2 = pa + 3*( j1*width_a + i2 ); // (i2,j1)
+			p3 = pa + 3*( j2*width_a + i1 ); // (i1,j2)
+			p4 = pa + 3*( j2*width_a + i2 ); // (i2,j2)
 			
 			B1 = *p1; G1 = *(p1+1); R1 = *(p1+2);
 			B2 = *p2; G2 = *(p2+1); R2 = *(p2+2);	
@@ -626,47 +626,39 @@ int rotate(image &a, image &b, image &c, double theta, int ig, int jg)
 			if( sum > 0 ) {
 			
 			// replace black interpolation points with background points		
-			
-			// TODO: combine rotate with append functions
-			// for efficiency and also subpixel resolution
-			// with bilinear interpolation ?
-			// what happens if ig, jg is subpixel ?
-			
-			// check for background pixel out of range
-			// and use nearest background pixel
-			if( i + ig < 0 ) ig = -i;
-			if( i + ig >= width_c ) ig = width_c - i - 1;
-			if( j + jg < 0 ) jg = -j;
-			if( j + jg >= height_c ) jg = height_c - j - 1;
+	
+	// TODO: subexpression optimization, etc. to improve efficiency
+
+	// TODO: more accurate expressions for i and j for substitutions ?
 
 			flag = 0;
 			if ( B1 + G1 + R1 == 0 ) {
-				p1 = pc + 3*( (j + jg) * width_c + i + ig );		
+				p1 = pb + 3*( j*width_b + i );		
 				B1 = *p1; G1 = *(p1+1); R1 = *(p1+2);
 				flag = 1;
 			}
 			
 			if ( B2 + G2 + R2 == 0 ) {
-				p2 = pc + 3*( (j + jg) * width_c + i + ig );	
+				p2 = pb + 3*( j*width_b + i );	
 				B2 = *p2; G2 = *(p2+1); R2 = *(p2+2);	
 				flag = 1;				
 			}
 
 			if ( B3 + G3 + R3 == 0 ) {
-				p3 = pc + 3*( (j + jg) * width_c + i + ig );		
+				p3 = pb + 3*( j*width_b + i );		
 				B3 = *p3; G3 = *(p3+1); R3 = *(p3+2);
 				flag = 1;
 			}
 
 			if ( B4 + G4 + R4 == 0 ) {
-				p4 = pc + 3*( (j + jg) * width_c + i + ig );
+				p4 = pb + 3*( j*width_b + i );
 				B4 = *p4; G4 = *(p4+1); R4 = *(p4+2);	
 				flag = 1;			
 			}			
 
 /*			
 			if( flag ) {
-				p1 = pc + 3*( (j + jg) * width_c + i + ig + 1);	
+				p1 = pb + 3*( j*width_b + i + 1);	
 				*p1 = 0;
 				*(p1+1) = 255;
 				*(p1+2) = 0;			
@@ -677,10 +669,14 @@ int rotate(image &a, image &b, image &c, double theta, int ig, int jg)
 			// find RGB for point a, b using linear interpolation, eg
 			// p3 Rb p4
 			// p1 Ra p2
-	
+
 			// interpolation point
-			ip = i_l + 0.5*width;
-			jp = j_l + 0.5*height;
+			// TODO: subexpression optimization
+			// TODO: show window function for testing window algo
+			// -- also include rotated windows and sampled points
+
+			ip = iL + ia;
+			jp = jL + ja;
 
 			Ra = R1 + (R2 - R1)*(ip - i1);
 			Rb = R3 + (R4 - R3)*(ip - i1);		
@@ -695,25 +691,24 @@ int rotate(image &a, image &b, image &c, double theta, int ig, int jg)
 			// p3 Rb p4
 			// p1 Ra p2
 			
-			R = Ra + (Rb - Ra)*(jp - j1);
-			G = Ga + (Gb - Ga)*(jp - j1);
-			B = Ba + (Bb - Ba)*(jp - j1);
+			R = (int)( Ra + (Rb - Ra)*(jp - j1) );
+			G = (int)( Ga + (Gb - Ga)*(jp - j1) );
+			B = (int)( Ba + (Bb - Ba)*(jp - j1) );
 			
 			////////////////////////////////////////////////////
 
-			if( !( (R < 1) && (G < 1) && (B < 1) ) ) {
-				*pb		= B;
-				*(pb+1) = G;
-				*(pb+2) = R;
+			// draw pixel if not a background pixel
+			if( R + G + B > 0 ) {
+				p1 = pout + 3*( j*width_out + i );
+				*p1	    = B;
+				*(p1+1) = G;
+				*(p1+2) = R;
 			}
-			
+		
 			} // end if sum > 0
 			
 			} // end if in range
-			
-			// move to next pixel in output image
-			pb += 3;
-			
+
 		} // end for i
 		
 	} // end for j
@@ -721,58 +716,146 @@ int rotate(image &a, image &b, image &c, double theta, int ig, int jg)
 	return 0;
 }
 
-	
-int append(image &a, image &b, int ip, int jp)
+// TODO: should check get_image for simple cases
+// - low constant velocity motion
+// - up and down simple case of integral pixel -- don't use transform
+// - program a compare function for two images -- good for testing, etc.
+
+int get_image(image &a, image &b, double ib, double jb, double theta)
 {
-	int i, j, ia, ja;
+	int i, j, R, G, B;
+	ibyte *pa, *pb;
+	double ic, jc;
+	double cos_th, sin_th;
+	int i1, j1;
+	
+	// variables for bilinear interpolation
+	ibyte *p1, *p2, *p3, *p4;
+	int B1, G1, R1, B2, G2, R2, B3, G3, R3, B4, G4, R4;	
+	double Ba, Ga, Ra, Bb, Gb, Rb;
 	int width_a, height_a, width_b, height_b;
-	ibyte *pa, *pb, R, G, B;
+	double ig, jg;
+
+	// TODO: add #define DEBUG which checks bounds
+
+	// TODO: check for image compatibility
+
+	cos_th = cos(theta);
+	sin_th = sin(theta);
 	
-	pa = a.pdata;
-	width_a = a.width;
-	height_a = a.height;
-	
-	pb = b.pdata;	
-	width_b = b.width;
+	pa	 = a.pdata;
+	pb	 = b.pdata;
+
+	width_a  = a.width;
+	height_a = a.height;	
+	width_b  = b.width;
 	height_b = b.height;
-	
-	// set pointer pa to beginning of the window for image b
-	pa += 3*( jp*width_a + ip );
-	
+
+	// TODO: check for special case of abs(theta) < 1.0e-7
+	// to speedup and reduce roundoff error
+
+	// calculate each pixel in output image using linear interpolation
+	// with respect to original image a
+
+	double ic0, jc0, di, dj;
+
+	ic0 = 0.5*(width_b-1);
+	jc0 = 0.5*(height_b-1);
+
 	for(j=0;j<height_b;j++) {		
 	
 		for(i=0;i<width_b;i++) {
-			
-			B = *pb;
-			G = *(pb+1);
-			R = *(pb+2);
 		
-			// calculate equivalent coordinates (ia,ja) in image a
-			ia = ip + i;
-			ja = jp + j;
-			
-			// only write if (ia,ja) is in range
-			if( (ia >= 0) && (ia < width_a) && (ja >= 0) && (ja < height_a) ) {
-					
-				if( !( (R < 1) && (G < 1) && (B < 1) ) ) {
-					*pa		= B;
-					*(pa+1) = G;
-					*(pa+2) = R;
-				}
-			
-			} // end if in range
-			
-			// move to next pixel
-			pa += 3;
-			pb += 3;
-			
-		}
+			// calculate global coord ig, jg
+			// pg = T + R*pl,  pg = [ig,jg], pl = [il,jl]	
+			// R  = [cos(th) -sin(th)]
+			//      [sin(th)  cos(th)]
 		
-		// advance to the next line
-		pa += 3*(width_a - width_b); 
+			// image center coords
+			// TODO: check -1 term in draw_image
+			ic = i - ic0;
+			jc = j - jc0;
+
+			// convert from local coord (image b) to global coord (image a)		
+			ig =  ib + cos_th*ic - sin_th*jc;
+			jg =  jb + sin_th*ic + cos_th*jc;
+
+			i1 = (int)ig;
+			j1 = (int)jg;		
+
+			// check if (i1,j1), etc. are within range of image a
+			if( (i1 > 1) && (i1 < width_a-3) && 
+				(j1 > 1) && (j1 < height_a-3) ) {		
+
+				// bilinear interpolation ///////////////////////
+
+				// set neighborhood pointers to interpolation points
+				// p3 p4
+				// p1 p2
+				p1 = pa + 3*( j1*width_a + i1 ); // (i1,j1)			
+				p2 = p1 + 3;
+				p3 = p1 + 3*width_a;
+				p4 = p3 + 3;
+			
+				B1 = *p1; G1 = *(p1+1); R1 = *(p1+2);
+				B2 = *p2; G2 = *(p2+1); R2 = *(p2+2);	
+				B3 = *p3; G3 = *(p3+1); R3 = *(p3+2);
+				B4 = *p4; G4 = *(p4+1); R4 = *(p4+2);				
+			
+				// TODO: subexpression optimization, etc. to improve efficiency
+
+				// TODO: more accurate expressions for i and j for substitutions ?
+			
+				// find RGB for point a, b using linear interpolation, eg
+				// p3 Rb p4
+				// p1 Ra p2
+
+				// interpolation point
+				// TODO: subexpression optimization
+				// TODO: show window function for testing window algo
+				// -- also include rotated windows and sampled points
+
+				di = ig - i1;
+				dj = jg - j1;
+
+				Ra = R1 + (R2 - R1)*di;
+				Rb = R3 + (R4 - R3)*di;		
+			
+				Ga = G1 + (G2 - G1)*di;
+				Gb = G3 + (G4 - G3)*di;	
+			
+				Ba = B1 + (B2 - B1)*di;
+				Bb = B3 + (B4 - B3)*di;	
+
+				// interpolate from point a to point b
+				// p3 Rb p4
+				// p1 Ra p2
+			
+				R = (int)( Ra + (Rb - Ra)*dj );
+				G = (int)( Ga + (Gb - Ga)*dj );
+				B = (int)( Ba + (Bb - Ba)*dj );
+			
+				// draw pixel into image b
+				p1 = pb + 3*( j*width_b + i );
+				*p1	    = (ibyte)B;
+				*(p1+1) = (ibyte)G;
+				*(p1+2) = (ibyte)R;
+
+			} else { // out of range of image a
+
+				// draw black pixel into image b
+				R = G = B = 0;
+				p1 = pb + 3*( j*width_b + i );
+				*p1	    = (ibyte)B;
+				*(p1+1) = (ibyte)G;
+				*(p1+2) = (ibyte)R;
+
+			} // end if (i,j) in range of image a
+
+		} // end for i
 		
 	} // end for j
-	
+
 	return 0;
 }
 

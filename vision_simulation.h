@@ -65,9 +65,10 @@ int set_robot_position(double x, double y, double theta);
 
 int set_opponent_position(double x, double y, double theta);
 
-int rotate(image &a, image &b, image &c, double theta, int ig, int jg);
-	
-int append(image &a, image &b, int ip, int jp);
+int draw_image(image &a, double theta, double ia, double ja, 
+			   image &b, double ib, double jb, image &output);
+
+int get_image(image &a, image &b, double ib, double jb, double theta);
 
 int draw_laser(robot *P, image &rgb);
 

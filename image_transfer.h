@@ -23,7 +23,7 @@ typedef struct {
 
 // size of shared memory block
 // 170 MB (10,000 x 5,650 pixel -- RGB image)
-const DWORD SMAX = 170000000; 
+const unsigned long int SMAX = 170000000; 
 
 // NODE_A = image transfer lib program
 // NODE_B = image_view program
@@ -68,7 +68,12 @@ int open_video_input(char *file_name, double &t_duration, int &width, int &heigh
 
 int close_video_input();
 
-int open_video_output(char *file_name);
+int open_video_output(char *file_name, 
+	int target_data_rate_bps = 100000000);
+
+// 100000000 bps (100,000 kbps) = 12:1 compression 
+// for a 1080p, 24 fps video which should give no 
+// significant losses -- even for very challenging cases
 
 int close_video_output();
 
