@@ -143,13 +143,13 @@ void Camera::processing()
 		hue_filter(2, 9, 0.55, 0.75, 150, 250);			//Red Filter
 		break;
 	case 7:
-		hue_filter(20, 40, 0.4, 0.6, 200, 260);		//Orange filter
+		//hue_filter(20, 40, 0.4, 0.6, 200, 260);		//Orange filter
 		break;
 	case 8:
 		hue_filter(145, 165, 0.5, 0.70, 170, 190);	//Green Filter
 		break;
 	case 9:
-		hue_filter(190, 210, 0.7, 0.85, 218, 235);		//Blue Filter
+		//hue_filter(190, 210, 0.7, 0.85, 218, 235);		//Blue Filter
 		break;
 	case 10:
 		copy(original, rgb);
@@ -603,7 +603,7 @@ void Camera::hue_filter(double min_hue, double max_hue, double min_sat, double m
 
 	//draw_point_rgb(rgb, ic, jc, 0, 255, 0);
 
-	cout << "\n ic = " << ic << " , jc = " << jc << endl;
+	//cout << "\n ic = " << ic << " , jc = " << jc << endl;
 }
 
 

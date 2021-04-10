@@ -173,7 +173,7 @@ int main()
 	tc0 = high_resolution_time(); 
 
 	
-	view[0]->find_object();    //Testing for "tracking" lecture, pick a white spot. Press 'c' to select.
+	//view[0]->find_object();    //Testing for "tracking" lecture, pick a white spot. Press 'c' to select.
 
 	while(1) {
 
@@ -192,6 +192,7 @@ int main()
 		view[0]->set_processing(0);			//Set and Prep for original copy
 		view[0]->processing();				//Make a copy of the rgb image
 
+		/*
 		view[0]->set_processing(1);			//Prepare rgb image for process used to keep tracking
 		view[0]->track_object();			//Track object selected from view[0]->find_object();
 
@@ -203,7 +204,7 @@ int main()
 
 		//view[0]->set_processing(5);
 		//view[0]->processing();
-
+		*/
 		view[0]->set_processing(0);			//Set and Prep for original copy
 		view[0]->processing();				//Make a copy of the rgb image
 
@@ -220,14 +221,20 @@ int main()
 			draw_point_rgb(view[0]->return_image(), pt_i[i], pt_j[i], 0, 0, 255); //Call back array and draw point at those locations
 		}
 
+		pt11.collision_points(view[0]->return_image());
+
+
+		/*
 		view[0]->set_processing(0);			//Set and Prep for original copy
 		view[0]->processing();				//Make a copy of the rgb image
 
 		view[0]->set_processing(10);		//Prep for sobel imagery
 		view[0]->processing();				//Do sobel imagery
-
+		*/
 		view[index]->view();	//View the the processed image
 		
+		pt11.set_coord(pt_i[3], pt_j[3], pt_i[0], pt_j[0]);
+
 		pt11.manual_set(pw_l, pw_r, pw_laser, laser);		//Control the bot. A W D for laser, arrows for bot
 
 		tc = high_resolution_time() - tc0;
