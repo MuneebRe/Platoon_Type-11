@@ -17,6 +17,11 @@ private:
 	int LL[4];
 	int Ln[4];
 
+	bool collision_state[4];
+	double timer1[4];
+	double timer2[4];
+	bool timer_flag;
+
 	double xg[4], yg[4];
 
 public:
@@ -24,7 +29,7 @@ public:
 	void manual_set(int& pw_l, int& pw_r, int& pw_laser, int& laser);
 	void set_coord(double x1, double y1, double x2, double y2);
 	void collision_points(Camera &view);
-	void check_collision(double arrx, double arry, Camera &view, int i);
+	void check_collision(int arrx[], int arry[], Camera &view, int i);
 	~PT11();
 };
 

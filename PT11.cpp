@@ -29,6 +29,10 @@ PT11::PT11()
 {
 	pw_l = 1500;
 	pw_r = 1500;
+	for (int i = 0; i < 4; i++)
+	{
+		collision_state[i] = 0;
+	}
 }
 
 void PT11::manual_set(int& pw_l, int& pw_r, int& pw_laser, int& laser)
@@ -102,7 +106,6 @@ void PT11::collision_points(Camera &view)
 				arrx[j] = x1 + Lx[i] * cos(theta) - (Ly[i] + (LL[i] * Ln[i]) / 2.0 - LL[i] / 2.0 - j * LL[i]) * sin(theta);
 				arry[j] = y1 + Lx[i] * sin(theta) + (Ly[i] + (LL[i] * Ln[i]) / 2.0 - LL[i] / 2.0 - j * LL[i]) * cos(theta);
 				//draw_point_rgb(view.return_image(), arrx[j], arry[j], 0, 0, 255);
-				check_collision(arrx[j], arry[j], view, i);
 			}
 			break;
 		case 1:
@@ -111,7 +114,6 @@ void PT11::collision_points(Camera &view)
 				arrx[j] = x1 + (Lx[i] + (LL[i] * Ln[i]) / 2.0 - LL[i] / 2.0 - j * LL[i]) * cos(theta) - (Ly[i]) * sin(theta);
 				arry[j] = y1 + (Lx[i] + (LL[i] * Ln[i]) / 2.0 - LL[i] / 2.0 - j * LL[i]) * sin(theta) + (Ly[i]) * cos(theta);
 				//draw_point_rgb(view.return_image(), arrx[j], arry[j], 0, 0, 255);
-				check_collision(arrx[j], arry[j], view, i);
 			}
 			break;
 		case 2:
@@ -120,7 +122,6 @@ void PT11::collision_points(Camera &view)
 				arrx[j] = x1 + Lx[i] * cos(theta) - (Ly[i] + (LL[i] * Ln[i]) / 2.0 - LL[i] / 2.0 - j * LL[i]) * sin(theta);
 				arry[j] = y1 + Lx[i] * sin(theta) + (Ly[i] + (LL[i] * Ln[i]) / 2.0 - LL[i] / 2.0 - j * LL[i]) * cos(theta);
 				//draw_point_rgb(view.return_image(), arrx[j], arry[j], 0, 0, 255);
-				check_collision(arrx[j], arry[j], view, i);
 			}
 			break;
 		case 3:
@@ -129,11 +130,11 @@ void PT11::collision_points(Camera &view)
 				arrx[j] = x1 + (Lx[i] + (LL[i] * Ln[i]) / 2.0 - LL[i] / 2.0 - j * LL[i]) * cos(theta) - (Ly[i]) * sin(theta);
 				arry[j] = y1 + (Lx[i] + (LL[i] * Ln[i]) / 2.0 - LL[i] / 2.0 - j * LL[i]) * sin(theta) + (Ly[i]) * cos(theta);
 				//draw_point_rgb(view.return_image(), arrx[j], arry[j], 0, 0, 255);
-				check_collision(arrx[j], arry[j], view, i);
 			}
+			
 			break;
-		
 		}
+		check_collision(arrx, arry, view, i);
 
 		delete[]arrx;
 		delete[]arry;
@@ -141,7 +142,7 @@ void PT11::collision_points(Camera &view)
 
 }
 
-void PT11::check_collision(double arrx, double arry, Camera &view, int i)
+void PT11::check_collision(int arrx[], int arry[], Camera &view, int i)
 {
 	//Since we're using stuff from the threshold, it's better to use the grey image type instead of rgb image,
 	//So we're using "a" image from view[0]
@@ -152,26 +153,39 @@ void PT11::check_collision(double arrx, double arry, Camera &view, int i)
 
 	pa = view.return_a().pdata;
 
-	int k = arrx + view.return_a().width * arry;	//For each dot on the line of points, find position based on 1D image reference
+	int* k = new int[Ln[i]];	//Can vary length of point series for collision accuracy
 	
-	if (pa[k] == 255)
+	for (int i2 = 0; i2 < Ln[i]; i2++)	//For each dot on the line of points, find position based on 1D image reference
 	{
-		switch (i)		//Based on the for loop that called this function, determine on what side is colliding
+		k[i2] = arrx[i2] + view.return_a().width * arry[i2];
+	}
+
+	for(int i2 =0; i2< Ln[i] ; i2++)	//If either point has 255 at pointer, turn on collision state
+	{
+		if (pa[k[i2]] == 255)
 		{
-		case 0:
-			cout << "FRONT COLLISION" << endl;
-			break;
-		case 1:
-			cout << "RIGHT COLLISION" << endl;
-			break;
-		case 2:
-			cout << "BACK COLLISION" << endl;
-			break;
-		case 3:
-			cout << "LEFT COLLISION" << endl;
+			collision_state[i] = true;
 			break;
 		}
 	}
+
+	int sum = 0;
+
+	for (int i2 = 0; i2 < Ln[i]; i2++)	//if all points of edge have 0 at pointer, than turn off collision state
+	{
+		if (pa[k[i2]] == 0)
+		{
+			sum++;
+		}
+	}
+	cout << "sum plus" << sum << endl;
+	if (sum >= Ln[i]) collision_state[i] = 0;
+
+	delete []k;
+
+	
+	cout << collision_state[0] << "\t" << collision_state[1] << "\t" << collision_state[2] << "\t" << collision_state[3] << endl;
+	
 }
 
 PT11::~PT11()
