@@ -12,10 +12,10 @@ private:
 	double theta, dtheta, ddtheta;
 	bool state_laser;
 
-	double Lx[4];
-	double Ly[4];
-	double LL[4];
-	double Ln[4];
+	int Lx[4];
+	int Ly[4];
+	int LL[4];
+	int Ln[4];
 
 	double xg[4], yg[4];
 
@@ -23,7 +23,8 @@ public:
 	PT11();
 	void manual_set(int& pw_l, int& pw_r, int& pw_laser, int& laser);
 	void set_coord(double x1, double y1, double x2, double y2);
-	void collision_points(image& rgb);
+	void collision_points(Camera &view);
+	void check_collision(double arrx, double arry, Camera &view, int i);
 	~PT11();
 };
 

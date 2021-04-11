@@ -20,7 +20,9 @@ using namespace std;
 #include "vision_simulation.h"
 #include "timer.h"
 
+#include "Camera.h"
 #include "PT11.h"
+
 
 
 PT11::PT11()
@@ -61,7 +63,7 @@ void PT11::set_coord(double x1, double y1, double x2, double y2)
 	this->x2 = x2;
 	this->y2 = y2;
 
-	if (abs((y1 - y2) / (x1 - x2)) > 0.001)
+	if (abs((y1 - y2) / (x1 - x2)) > 0.001)				//Makes theta angle continous 0 - 2 pi
 	{
 		theta = atan((y1 - y2) / (x1 - x2));
 		if (y1 - y2 > 0 && x1 - x2 > 0) theta = theta;
@@ -70,11 +72,18 @@ void PT11::set_coord(double x1, double y1, double x2, double y2)
 		if (y1 - y2 < 0 && x1 - x2 > 0) theta = 2 * M_PI + theta;
 	}
 
-	cout << x1 << "\t" << y1 << "\t" << theta << endl;
+	//cout << x1 << "\t" << y1 << "\t" << theta << endl;
 }
 
-void PT11::collision_points(image& rgb)
+void PT11::collision_points(Camera &view)
 {
+	//Look at robot.cpp example, how Lx and Ly are used to connect laser on the bot at a distance
+	//LL is the lenght between the dots (invisible)
+	//Ln is the number of dots the user is interested in using per side
+	//[0] Front - [1] right - [2] back - [3] left
+	//Basically, there are dots on all sides of the car to detect collision.
+	//I had to comment out draw_point_rgb because it messes up with check_collision( )
+
 	Lx[0] = 40;		Ly[0] = 0;		LL[0] = 20;		Ln[0] = 4;
 	Lx[1] = -40;	Ly[1] = -50;	LL[1] = 30;		Ln[1] = 4;
 	Lx[2] = -120;	Ly[2] = 0;		LL[2] = 20;		Ln[2] = 4;
@@ -82,41 +91,45 @@ void PT11::collision_points(image& rgb)
 
 	for (int i = 0; i < 4; i++)
 	{
-		double* arrx = new double[Ln[i]];
-		double* arry = new double[Ln[i]];
-
-		switch (i)
+		int* arrx = new int[Ln[i]];		//Dynamic memory, can change number of points interested in using
+		int* arry = new int[Ln[i]];		//Kinda like resolution. More points can make it a line
+		
+		switch (i)						//Different sides, different line rotation. Same for [0] & [2] - [1] & [3]
 		{
 		case 0:
 			for (int j = 0; j < Ln[0]; j++)
 			{
 				arrx[j] = x1 + Lx[i] * cos(theta) - (Ly[i] + (LL[i] * Ln[i]) / 2.0 - LL[i] / 2.0 - j * LL[i]) * sin(theta);
 				arry[j] = y1 + Lx[i] * sin(theta) + (Ly[i] + (LL[i] * Ln[i]) / 2.0 - LL[i] / 2.0 - j * LL[i]) * cos(theta);
-				draw_point_rgb(rgb, arrx[j], arry[j], 0, 0, 255);
+				//draw_point_rgb(view.return_image(), arrx[j], arry[j], 0, 0, 255);
+				check_collision(arrx[j], arry[j], view, i);
 			}
 			break;
 		case 1:
-			for (int j = 0; j < Ln[0]; j++)
+			for (int j = 0; j < Ln[1]; j++)
 			{
 				arrx[j] = x1 + (Lx[i] + (LL[i] * Ln[i]) / 2.0 - LL[i] / 2.0 - j * LL[i]) * cos(theta) - (Ly[i]) * sin(theta);
 				arry[j] = y1 + (Lx[i] + (LL[i] * Ln[i]) / 2.0 - LL[i] / 2.0 - j * LL[i]) * sin(theta) + (Ly[i]) * cos(theta);
-				draw_point_rgb(rgb, arrx[j], arry[j], 0, 0, 255);
+				//draw_point_rgb(view.return_image(), arrx[j], arry[j], 0, 0, 255);
+				check_collision(arrx[j], arry[j], view, i);
 			}
 			break;
 		case 2:
-			for (int j = 0; j < Ln[0]; j++)
+			for (int j = 0; j < Ln[2]; j++)
 			{
 				arrx[j] = x1 + Lx[i] * cos(theta) - (Ly[i] + (LL[i] * Ln[i]) / 2.0 - LL[i] / 2.0 - j * LL[i]) * sin(theta);
 				arry[j] = y1 + Lx[i] * sin(theta) + (Ly[i] + (LL[i] * Ln[i]) / 2.0 - LL[i] / 2.0 - j * LL[i]) * cos(theta);
-				draw_point_rgb(rgb, arrx[j], arry[j], 0, 0, 255);
+				//draw_point_rgb(view.return_image(), arrx[j], arry[j], 0, 0, 255);
+				check_collision(arrx[j], arry[j], view, i);
 			}
 			break;
 		case 3:
-			for (int j = 0; j < Ln[0]; j++)
+			for (int j = 0; j < Ln[3]; j++)
 			{
 				arrx[j] = x1 + (Lx[i] + (LL[i] * Ln[i]) / 2.0 - LL[i] / 2.0 - j * LL[i]) * cos(theta) - (Ly[i]) * sin(theta);
 				arry[j] = y1 + (Lx[i] + (LL[i] * Ln[i]) / 2.0 - LL[i] / 2.0 - j * LL[i]) * sin(theta) + (Ly[i]) * cos(theta);
-				draw_point_rgb(rgb, arrx[j], arry[j], 0, 0, 255);
+				//draw_point_rgb(view.return_image(), arrx[j], arry[j], 0, 0, 255);
+				check_collision(arrx[j], arry[j], view, i);
 			}
 			break;
 		
@@ -126,16 +139,39 @@ void PT11::collision_points(image& rgb)
 		delete[]arry;
 	}
 
+}
+
+void PT11::check_collision(double arrx, double arry, Camera &view, int i)
+{
+	//Since we're using stuff from the threshold, it's better to use the grey image type instead of rgb image,
+	//So we're using "a" image from view[0]
+
+	copy(view.return_image(), view.return_a());
 	
+	ibyte* pa;
+
+	pa = view.return_a().pdata;
+
+	int k = arrx + view.return_a().width * arry;	//For each dot on the line of points, find position based on 1D image reference
 	
-	/*
-	for (int i = 0; i < 4; i++)
+	if (pa[k] == 255)
 	{
-		xg[i] = x1 + Lx[i] * cos(theta) - Ly[i] * sin(theta);
-		yg[i] = y1 + Lx[i] * sin(theta) + Ly[i] * cos(theta);
-		draw_point_rgb(rgb, xg[i], yg[i], 0, 0, 255);
+		switch (i)		//Based on the for loop that called this function, determine on what side is colliding
+		{
+		case 0:
+			cout << "FRONT COLLISION" << endl;
+			break;
+		case 1:
+			cout << "RIGHT COLLISION" << endl;
+			break;
+		case 2:
+			cout << "BACK COLLISION" << endl;
+			break;
+		case 3:
+			cout << "LEFT COLLISION" << endl;
+			break;
+		}
 	}
-	*/
 }
 
 PT11::~PT11()

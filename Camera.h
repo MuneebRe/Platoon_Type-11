@@ -21,6 +21,7 @@ public:
 	void view();
 	void processing();
 	image& return_image() { return rgb; }
+	image& return_a() { return a; }
 	int get_count() { return count; }
 	void set_processing(int processing_type) { this->processing_type = processing_type; }
 	void acquire();

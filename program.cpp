@@ -220,9 +220,13 @@ int main()
 		{
 			draw_point_rgb(view[0]->return_image(), pt_i[i], pt_j[i], 0, 0, 255); //Call back array and draw point at those locations
 		}
-
-		pt11.collision_points(view[0]->return_image());
-
+		 
+		
+		view[0]->set_processing(1);			//Enable threshold processing and everything
+		view[0]->processing();				//Run process
+		pt11.collision_points(*view[0]);	//Move view[0] object into pt11 function
+		
+		//pt11.check_collision(view[0]);
 
 		/*
 		view[0]->set_processing(0);			//Set and Prep for original copy
