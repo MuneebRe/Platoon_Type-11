@@ -158,7 +158,7 @@ int main()
 	int pt_i[4];	//x Point locations of the "colored" parts of both robots
 	int pt_j[4];	//y Point locations of the "colored" parts of both robots
 
-	int view_state[3] = { true, true, false };	//Defines if enabled/disabled Simulator, Top View Cam, First Person Cam
+	int view_state[3] = { true, false, false };	//Defines if enabled/disabled Simulator, Top View Cam, First Person Cam
 
 	Camera* view[3];
 	view[0] = new Camera(view_state[0], 0, 640, 480, RGB_IMAGE, true, 1);	 //Simulator		   (sim)

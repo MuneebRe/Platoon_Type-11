@@ -178,7 +178,7 @@ void PT11::check_collision(int arrx[], int arry[], Camera &view, int i)
 			sum++;
 		}
 	}
-	cout << "sum plus" << sum << endl;
+	//cout << "sum plus" << sum << endl;
 	if (sum >= Ln[i]) collision_state[i] = 0;
 
 	delete []k;
