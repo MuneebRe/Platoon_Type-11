@@ -28,6 +28,171 @@ extern robot_system S1;
 
 #define KEY(c) ( GetAsyncKeyState((int)(c)) & (SHORT)0x8000 )
 
+void detect_laser(int pnt_i[4], int pnt_j[4], Camera* view[3]);
+
+void detect_laser(int pnt_i[4], int pnt_j[4], Camera* view[3]) {
+	/*
+	- Element 2 and 4 of pnt_i[]/pnt_j[] is orange (front) and blue (back) filter respectively (enemy bot)
+	- Find the line of pixels of the laser and place every single pixel k value (k = i + j*rgb.width) into an array
+		->The robot will calculate the distance between its centroid (k pixel value of centroid) to each pixel in the array and determine if it needs to evade.
+
+	***Direction of evasion based on locations of laser/enemy robot/current position/local objects will be taken into account later, as well as borders***
+	*/
+	int i, j, i1, j1, k;
+	int x1, y1, x2, y2;
+	int delta_x, delta_y;
+	int laser_array_size, number_of_elements; //image is always 640x480 -> sqrt((640^2)+(480^2)) = 800 pixels max necessary, make laser array size = 1000
+	int* laser_array;
+	int flag_left, flag_right;
+	double slope, flag_slope, b;
+
+	x1 = pnt_i[1];
+	y1 = pnt_j[1];
+	x2 = pnt_i[3];
+	y2 = pnt_j[3];
+	delta_x = x1 - x2;
+	delta_y = y1 - y2;
+	if (delta_x == 0) {
+		slope = 0;
+	}
+	else {
+		slope = (delta_y / delta_x);
+	}
+	b = y1 - (slope * x1);
+	laser_array_size = 1000;
+	laser_array = new int[laser_array_size];	//allocate dynamic memory
+	number_of_elements = 0;
+	//These flags will indicate which direction the robot was facing last based on slope, so when the enemy robot is vertical, we can use these flags to determine its direction
+	flag_left = 0;
+	flag_right = 0;
+	/*
+	***No need for quaderants -> simply seperate between robot facing towards the right or left, the slope will account for laser direction, ie: y values to determine k pixel value***
+	* Quaderants might be added to trigger flags that can indicate the robot to determine direction of evasion! *
+	if (delta_x > 0 && delta_y > 0) {
+		//Laser directed first quaderant -> ranges are x = [x2, 640-x2], y = [y2, 480-y2] in for-loop
+		for (j = y2; j < 480; j++) {
+			for (i = x2; i < 640; i++) {
+				j1 = (slope*i)+y2
+				//laser_array[k] = k
+			}
+		}
+	}
+	*/
+	//OG method
+	/*
+	if (delta_x > 0) {
+		//Enemy robot facing to the right, range of x = [x1, 640]
+		flag_right = 1;
+		flag_left = 0;
+		flag_slope = slope;
+
+		for (i = int(x1); i < 640; i++) {
+			j = int((slope * i) + b);	//According to the slope of the enemy robot and direction, the j value of each pixel of the laser is calculated
+			k = int(i) + (j * 640);		//pixel coordinate of each laser pixel is calculated as k
+			laser_array[number_of_elements] = k;
+
+			number_of_elements++;	//increment to next array element
+		}
+	}
+	else if (delta_x < 0) {
+		//Enemy robot facing to the left, range of x = [0, x1]
+		flag_right = 0;
+		flag_left = 1;
+		flag_slope = slope;
+
+		for (i = 0; i <= int(x1); i++) {
+			j = int((slope * i) + b);
+			k = int(i) + (j * 640);
+			laser_array[number_of_elements] = k;
+
+			number_of_elements++;
+		}
+	}
+	*/
+	//New alternative
+	if (delta_x > 0) {
+		//Enemy robot facing to the right, range of x = [x1, 640]
+		flag_right = 1;
+		flag_left = 0;
+		flag_slope = slope;
+
+		for (i = 0; i < 640; i++) {
+			if (i >= x1) {
+				j = int((slope * i) + b);	//According to the slope of the enemy robot and direction, the j value of each pixel of the laser is calculated
+				k = int(i) + (j * 640);		//pixel coordinate of each laser pixel is calculated as k
+				laser_array[number_of_elements] = k;
+
+				number_of_elements++;	//increment to next array element
+			}
+		}
+	}
+	else if (delta_x < 0) {
+		//Enemy robot facing to the left, range of x = [0, x1]
+		flag_right = 0;
+		flag_left = 1;
+		flag_slope = slope;
+
+		for (i = 0; i <= int(x1); i++) {
+			j = int((slope * i) + b);
+			k = int(i) + (j * 640);
+			laser_array[number_of_elements] = k;
+
+			number_of_elements++;
+		}
+	}
+	else if (delta_x == 0) {
+		if (flag_right == 1 && flag_slope > 0) {
+			//If the robot was last facing right with a positive slope, robot is vertically facing up and ranges from [y1, 480]
+			for (j = int(y1); j < 480; j++) {
+				i = int(x1);
+				k = i + (j * 640);
+				laser_array[number_of_elements] = k;
+
+				number_of_elements++;
+			}
+		}
+		else if (flag_right == 1 && flag_slope < 0) {
+			//If the robot was last facing right with a negative slope, robot is vertically facing down and ranges from [0, y1]
+			for (j = 0; j <= int(y1); j++) {
+				i = int(x1);
+				k = i + (j * 640);
+				laser_array[number_of_elements] = k;
+
+				number_of_elements++;
+			}
+		}
+		else if (flag_left == 1 && flag_slope < 0) {
+			//If the robot was last facing left with a negative slope, robot is vertically facing up and ranges from [y1, 480]
+			for (j = int(y1); j < 480; j++) {
+				i = int(x1);
+				k = i + (j * 640);
+				laser_array[number_of_elements] = k;
+
+				number_of_elements++;
+			}
+		}
+		else if (flag_right == 1 && flag_slope > 0) {
+			//If the robot was last facing left with a positive slope, robot is vertically facing down and ranges from [0, y1]
+			for (j = 0; j <= int(y1); j++) {
+				i = int(x1);
+				k = i + (j * 640);
+				laser_array[number_of_elements] = k;
+
+				number_of_elements++;
+			}
+		}
+	}
+
+	for (int increment = 0; increment < 40; increment++) {
+		//Draw a red dot for each point of the laser ontop of the rgb image. (THIS MUST BE CLEANED UP, needs to be seemlessly layered onto RGB like muneeb's tracking
+		k = laser_array[increment];
+		i = int(k % 640);	//width is always 640 images
+		j = int((k - i) / 640);
+		draw_point_rgb(view[0]->return_image(), i, j, 255, 0, 0);
+	}
+}
+
+
 int main()
 {
 	double x0, y0, theta0, max_speed, opponent_max_speed;
@@ -235,6 +400,9 @@ int main()
 		view[0]->set_processing(10);		//Prep for sobel imagery
 		view[0]->processing();				//Do sobel imagery
 		*/
+
+		detect_laser(pt_i, pt_j, view);
+
 		view[index]->view();	//View the the processed image
 		
 		pt11.set_coord(pt_i[3], pt_j[3], pt_i[0], pt_j[0]);
@@ -242,6 +410,20 @@ int main()
 		pt11.manual_set(pw_l, pw_r, pw_laser, laser);		//Control the bot. A W D for laser, arrows for bot
 
 		tc = high_resolution_time() - tc0;
+
+		//Quick manual control of opponent for testing
+		int o[2];
+
+		o[0] = 0;
+		o[1] = 0;
+
+		if (KEY('U')) o[0] = 200;
+		if (KEY('J')) o[0] = -200;
+		if (KEY('H')) o[1] = -150;
+		if (KEY('K')) o[1] = 150;
+
+		pw_l_o = 1500 + o[1] - o[0];
+		pw_r_o = 1500 + o[1] + o[0];
 
 		set_inputs(pw_l,pw_r,pw_laser,laser,
 			light,light_gradient,light_dir,image_noise,
