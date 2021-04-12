@@ -28,6 +28,70 @@ extern robot_system S1;
 
 #define KEY(c) ( GetAsyncKeyState((int)(c)) & (SHORT)0x8000 )
 
+/*
+
+*/
+
+void get_safe_zone(Camera* view[3], int pt_i[4], int pt_j[4]);
+
+void get_safe_zone(Camera* view[3], int pt_i[4], int pt_j[4]){
+
+	int i, j;
+	int x0, y0, x1, y1;
+	double delta_x, delta_y;
+	double slope;
+	int height, width;
+	int* line_array_i, * line_array_j;
+	int size;
+
+	int increment;
+
+	width = 640;
+	height = 480;
+	line_array_i = new int[1000];
+	line_array_j = new int[1000];
+	size = 0;
+	
+	x0 = pt_i[2];	//centroids of enemy_robot (orange circle)
+	y0 = pt_j[2];
+	x1 = 640;
+	y1 = y0 + 20;
+
+	delta_x = (double) x1 - x0;
+	delta_y = (double) y1 - y0;
+	//cout << "\ndelta_y = " << delta_y;
+	slope = delta_y / delta_x;
+	//cout << "\nslope = " << slope;
+
+	for (i = x0; i < x1; i++) {
+		j = int((slope * i));
+		cout << "\ndelta_y = " << delta_y;
+		cout << "\nslope = " << slope;
+		cout << "\nj value = " << j;
+		cout << "\nsize value = " << size;
+
+		line_array_i[size] = i;
+		line_array_j[size] = j;
+
+		cout << "\narray j = " << line_array_j[size];
+
+		size++;
+	}
+
+	for (increment = 30; increment < size; increment++) {
+		int x, y;
+
+		x = line_array_i[increment];
+		y = line_array_j[increment];
+
+		draw_point_rgb(view[0]->return_image(), x, y, 255, 0, 0);
+	}
+
+	
+}
+
+
+
 int main()
 {
 	double x0, y0, theta0, max_speed, opponent_max_speed;
@@ -216,16 +280,23 @@ int main()
 			pt_j[i-6] = view[0]->get_jc();	//For each color
 		}
 
+		/*
+		for (int i = 0; i < 4; i++) {
+			cout << "\n Centroid (x,y), " << i << " = " << pt_i[i] << " , " << pt_j[i] << endl;
+		}
+		cout << "gurv: paused, press any key to continue";
+		*/
+
 		for (int i = 0; i < 4; i++)
 		{
 			draw_point_rgb(view[0]->return_image(), pt_i[i], pt_j[i], 0, 0, 255); //Call back array and draw point at those locations
 		}
 		 
-		
+		/*
 		view[0]->set_processing(1);			//Enable threshold processing and everything
 		view[0]->processing();				//Run process
 		pt11.collision_points(*view[0]);	//Move view[0] object into pt11 function
-		
+		*/
 		//pt11.check_collision(view[0]);
 
 		/*
@@ -235,6 +306,9 @@ int main()
 		view[0]->set_processing(10);		//Prep for sobel imagery
 		view[0]->processing();				//Do sobel imagery
 		*/
+
+		get_safe_zone(view, pt_i, pt_j);
+
 		view[index]->view();	//View the the processed image
 		
 		pt11.set_coord(pt_i[3], pt_j[3], pt_i[0], pt_j[0]);
