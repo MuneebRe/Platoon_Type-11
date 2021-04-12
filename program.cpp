@@ -258,7 +258,7 @@ int main()
 		
 
 		//pt11.manual_set(pw_l, pw_r, pw_laser, laser);		//Control the bot. A W D for laser, arrows for bot
-		//enemy.manual_set(pw_l_o, pw_r_o, pw_laser_o, laser_o);
+		enemy.manual_set(pw_l_o, pw_r_o, pw_laser_o, laser_o);
 
 		tc = high_resolution_time() - tc0;
 

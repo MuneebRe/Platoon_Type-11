@@ -11,6 +11,7 @@ public:
 	double collision_t1[4];
 	double collision_t2[4];
 	double collision_dt[4];
+	double collision_dt_target[4];
 
 	bool net_mem[7];
 	double net_out[3];

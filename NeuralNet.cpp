@@ -18,16 +18,66 @@ void toTerminal2(bool net_mem[], double net_out[]);
  * Network Configuration - customized per network
  ******************************************************************/
 
-const int PatternCount = 11;
+const int PatternCount = 17;
 const int InputNodes = 7;
-const int HiddenNodes = 20;
+const int HiddenNodes = 25;
 const int OutputNodes = 3;
 const float LearningRate = 0.007;
 const float Momentum = 0.9;
 const float InitialWeightMax = 0.5;
 const float Success = 0.0004;
-//const float Success = 0.02;
 
+
+const short int Input[PatternCount][InputNodes] = {
+  { 0, 0, 0, 0, 0, 1, 0 },   // Enemy to your right
+  { 0, 0, 0, 0, 1, 0, 0 },   // Enemy to your left
+  { 0, 0, 0, 0, 0, 0, 1 },    // Enemy Detected
+  { 1, 0, 0, 0, 1, 0, 0 },    // Front Collision - Enemy to the left
+  { 1, 0, 0, 0, 0, 1, 0 },    // Front Collision - Enemy to the right
+  { 0, 0, 0, 1, 1, 0, 0 },    // Left Collision - Enemy to the left
+  { 0, 0, 0, 1, 0, 1, 0 },    // Left Collision - Enemy to the right
+  { 1, 0, 0, 1, 1, 0, 0 },    // Front Left Collision - Enemy to the left
+  { 1, 0, 0, 1, 0, 1, 0 },    // Front Left Collision - Enemy to the right
+  { 0, 1, 0, 0, 1, 0, 0 },    // Right Collision - Enemy to the left
+  { 0, 1, 0, 1, 0, 1, 0 },    // Right Collision - Enemy to the right
+  { 1, 1, 0, 0, 1, 0, 0 },    // Front Right Collision - Enemy to the left
+  { 1, 1, 0, 0, 0, 1, 0 },    // Front Right Collision - Enemy to the right
+  { 0, 0, 1, 1, 1, 0, 0 },    // Back Left Collision - Enemy to the left
+  { 0, 0, 1, 1, 0, 1, 0 },    // Back Left Collision - Enemy to the right
+  { 0, 1, 1, 0, 1, 0, 0 },    // Back Right Collision - Enemy to the left
+  { 0, 1, 1, 0, 0, 1, 0 }     // Back Right Collision - Enemy to the right
+};
+
+const short int Target[PatternCount][OutputNodes] = {
+  { 0, 0, 0 },   // Turn right
+  { 1, 1, 0 },   // Turn left
+  { 0, 1, 0 },   // Go straight
+  { 0, 0, 0 },   // Turn Right
+  { 0, 0, 0 },   // Turn Right
+  { 0, 1, 0 },   // Go Straight
+  { 0, 1, 0 },   // Go Straight
+  { 0, 0, 0 },   // Turn Right
+  { 0, 0, 0 },   // Turn Right
+  { 0, 1, 0 },   // Go Straight
+  { 0, 1, 0 },   // Go Straight
+  { 0, 0, 0 },   // Turn Left
+  { 0, 0, 0 },    // Turn Left
+  { 1, 1, 0 },   // Go Straight
+  { 1, 1, 0 },   // Go Straight
+  { 0, 0, 0 },   // Go Straight
+  { 0, 0, 0 }    // Go Straight
+};
+
+
+//1000 - 0
+//1500 - 0.5
+//2000 - 1
+//1 1 left
+//0 0 right
+//0 1 forward
+//1 0 back
+
+/*
 const short int Input[PatternCount][InputNodes] = {
   { 1, 0, 0, 0, 0, 0, 0 },  // Front Collision
   { 0, 1, 0, 0, 0, 0, 0 },  // Right Collision
@@ -38,8 +88,14 @@ const short int Input[PatternCount][InputNodes] = {
   { 0, 0, 0, 0, 1, 0, 0 },  // Theta Target Left
   { 0, 0, 0, 0, 0, 0, 1 },  // Enemy Detect
   { 1, 0, 0, 0, 0, 0, 1 },  // Enemy Detect but front blocked
-  { 1, 0, 0, 0, 1, 0, 1 },   // Obstacle in front, but target to your left
-  { 1, 0, 0, 0, 0, 1, 1 }   // Obstacle in front, but target to your right
+  { 1, 0, 0, 0, 1, 0, 1 },  // Obstacle in front, but target to your left
+  { 1, 0, 0, 0, 0, 1, 1 },  // Obstacle in front, but target to your right
+  { 1, 1, 1, 1, 0, 1, 0 },  // Collision all sides, robot stuck, target left
+  { 1, 1, 1, 1, 1, 0, 0 },   // Collision all sides, robot stuck, target right
+  { 1, 1, 0, 0, 0, 1, 0 },  // Collision front right corner, target right
+  { 1, 1, 0, 0, 1, 0, 0 },   // Collision front right corner, target left
+  { 1, 0, 0, 1, 0, 1, 0 },  // Collision front left corner, target right
+  { 1, 0, 0, 1, 1, 0, 0 }   // Collision front left corner, target left
 };
 
 const short int Target[PatternCount][OutputNodes] = {
@@ -53,14 +109,15 @@ const short int Target[PatternCount][OutputNodes] = {
   { 0, 1, 0 },
   { 1, 1, 0 },
   { 1, 1, 0 },
+  { 1, 1, 0 },
+  { 0.5, 0.5, 0 },
+  { 0.5, 0.5, 0 },
+  { 0, 0, 0 },
+  { 0, 0, 0 },
+  { 1, 1, 0 },
   { 1, 1, 0 }
 };
-
-/*
-//1000 - 0
-//1500 - 0.5
-//2000 - 1
-
+*/
 /******************************************************************
  * End Network Configuration
  ******************************************************************/

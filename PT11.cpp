@@ -44,7 +44,12 @@ PT11::PT11()
 		collision_dt[i] = 0;
 		collision_t1[i] = 0;
 		collision_t2[i] = 0;
+		collision_state[i] = 0;
 	}
+	collision_dt_target[0] = 1.00;
+	collision_dt_target[1] = 0.90;
+	collision_dt_target[2] = 1.00;
+	collision_dt_target[3] = 0.90;
 
 }
 
@@ -94,15 +99,17 @@ void PT11::collision_points(Camera &view)
 	//Basically, there are dots on all sides of the car to detect collision.
 	//I had to comment out draw_point_rgb because it messes up with check_collision( )
 
-	Lx[0] = 40;		Ly[0] = 0;		LL[0] = 20;		Ln[0] = 4;
-	Lx[1] = -40;	Ly[1] = -50;	LL[1] = 30;		Ln[1] = 4;
-	Lx[2] = -120;	Ly[2] = 0;		LL[2] = 20;		Ln[2] = 4;
-	Lx[3] = -40;	Ly[3] = 50;		LL[3] = 30;		Ln[3] = 4;
+	Lx[0] = 60;		Ly[0] = 0;		LL[0] = 20;		Ln[0] = 6;
+	Lx[1] = -40;	Ly[1] = -50;	LL[1] = 30;		Ln[1] = 6;
+	Lx[2] = -120;	Ly[2] = 0;		LL[2] = 20;		Ln[2] = 6;
+	Lx[3] = -40;	Ly[3] = 50;		LL[3] = 30;		Ln[3] = 6;
 
 	for (int i = 0; i < 4; i++)
 	{
 		int* arrx = new int[Ln[i]];		//Dynamic memory, can change number of points interested in using
 		int* arry = new int[Ln[i]];		//Kinda like resolution. More points can make it a line
+
+		bool flag =0;
 		
 		switch (i)						//Different sides, different line rotation. Same for [0] & [2] - [1] & [3]
 		{
@@ -111,7 +118,7 @@ void PT11::collision_points(Camera &view)
 			{
 				arrx[j] = x1 + Lx[i] * cos(theta) - (Ly[i] + (LL[i] * Ln[i]) / 2.0 - LL[i] / 2.0 - j * LL[i]) * sin(theta);
 				arry[j] = y1 + Lx[i] * sin(theta) + (Ly[i] + (LL[i] * Ln[i]) / 2.0 - LL[i] / 2.0 - j * LL[i]) * cos(theta);
-				//draw_point_rgb(view.return_image(), arrx[j], arry[j], 0, 0, 255);
+				if(flag == 1) draw_point_rgb(view.return_image(), arrx[j], arry[j], 255, 255, 255);
 			}
 			break;
 		case 1:
@@ -119,7 +126,7 @@ void PT11::collision_points(Camera &view)
 			{
 				arrx[j] = x1 + (Lx[i] + (LL[i] * Ln[i]) / 2.0 - LL[i] / 2.0 - j * LL[i]) * cos(theta) - (Ly[i]) * sin(theta);
 				arry[j] = y1 + (Lx[i] + (LL[i] * Ln[i]) / 2.0 - LL[i] / 2.0 - j * LL[i]) * sin(theta) + (Ly[i]) * cos(theta);
-				//draw_point_rgb(view.return_image(), arrx[j], arry[j], 255, 255, 255);
+				if (flag == 1) draw_point_rgb(view.return_image(), arrx[j], arry[j], 255, 255, 255);
 			}
 			break;
 		case 2:
@@ -127,7 +134,7 @@ void PT11::collision_points(Camera &view)
 			{
 				arrx[j] = x1 + Lx[i] * cos(theta) - (Ly[i] + (LL[i] * Ln[i]) / 2.0 - LL[i] / 2.0 - j * LL[i]) * sin(theta);
 				arry[j] = y1 + Lx[i] * sin(theta) + (Ly[i] + (LL[i] * Ln[i]) / 2.0 - LL[i] / 2.0 - j * LL[i]) * cos(theta);
-				//draw_point_rgb(view.return_image(), arrx[j], arry[j], 255, 255, 255);
+				if (flag == 1) draw_point_rgb(view.return_image(), arrx[j], arry[j], 255, 255, 255);
 			}
 			break;
 		case 3:
@@ -135,7 +142,7 @@ void PT11::collision_points(Camera &view)
 			{
 				arrx[j] = x1 + (Lx[i] + (LL[i] * Ln[i]) / 2.0 - LL[i] / 2.0 - j * LL[i]) * cos(theta) - (Ly[i]) * sin(theta);
 				arry[j] = y1 + (Lx[i] + (LL[i] * Ln[i]) / 2.0 - LL[i] / 2.0 - j * LL[i]) * sin(theta) + (Ly[i]) * cos(theta);
-				//draw_point_rgb(view.return_image(), arrx[j], arry[j], 255, 255, 255);
+				if (flag == 1) draw_point_rgb(view.return_image(), arrx[j], arry[j], 255, 255, 255);
 			}
 			
 			break;
@@ -161,9 +168,16 @@ void PT11::check_collision(int arrx[], int arry[], Camera &view, int i)
 
 	int* k = new int[Ln[i]];	//Can vary length of point series for collision accuracy
 	
+
 	for (int i2 = 0; i2 < Ln[i]; i2++)	//For each dot on the line of points, find position based on 1D image reference
 	{
-		k[i2] = arrx[i2] + view.return_a().width * arry[i2];
+		if (arrx[i2] > 0 && arrx[i2] < view.return_a().width && arry[i2] > 0 && arry[i2] < view.return_a().height)
+		{
+			k[i2] = arrx[i2] + view.return_a().width * arry[i2];
+		}
+		else {
+			k[i2] = 1 + view.return_a().width;
+		}
 	}
 
 	for(int i2 =0; i2< Ln[i] ; i2++)	//If either point has 255 at pointer, turn on collision state
@@ -200,7 +214,7 @@ void PT11::check_collision(int arrx[], int arry[], Camera &view, int i)
 			collision_dt[i] = collision_t2[i] - collision_t1[i];
 		}
 
-		if (collision_dt[i] > 0.60 && collision_t_flag[i] == 1)
+		if (collision_dt[i] > collision_dt_target[i] && collision_t_flag[i] == 1)
 		{
 			collision_t_flag[i] = 0;
 			collision_state[i] = 0;
