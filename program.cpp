@@ -22,6 +22,7 @@ using namespace std;
 #include "Camera.h"
 #include "Serial.h"
 #include "PT11.h"
+#include "NeuralNet.h"
 
 extern robot_system S1;
 
@@ -168,6 +169,9 @@ int main()
 	Serial port(false, "COM12", 1);		//Establish bluetooth communication with robot (real)
 
 	PT11 pt11;		//Make instance of robot (sim)
+	runNet();
+
+	PT11 enemy;		//Make instance of enemy
 
 	// measure initial clock time
 	tc0 = high_resolution_time(); 
@@ -188,6 +192,8 @@ int main()
 		}
 
 		view[index]->acquire();					//Get RGB image
+
+		view[index]->draw_border();
 
 		view[0]->set_processing(0);			//Set and Prep for original copy
 		view[0]->processing();				//Make a copy of the rgb image
@@ -216,17 +222,26 @@ int main()
 			pt_j[i-6] = view[0]->get_jc();	//For each color
 		}
 
+		/*
 		for (int i = 0; i < 4; i++)
 		{
 			draw_point_rgb(view[0]->return_image(), pt_i[i], pt_j[i], 0, 0, 255); //Call back array and draw point at those locations
 		}
-		 
+		*/
+
+
 		
 		view[0]->set_processing(1);			//Enable threshold processing and everything
 		view[0]->processing();				//Run process
 		pt11.collision_points(*view[0]);	//Move view[0] object into pt11 function
-		
-		//pt11.check_collision(view[0]);
+		pt11.set_coord(pt_i[2], pt_j[2], pt_i[0], pt_j[0]);
+
+		enemy.set_coord(pt_i[1], pt_j[1], pt_i[3], pt_j[3]);
+		//cout << "theta = " << enemy.get_theta() << endl;;
+		pt11.find_target(enemy);
+
+		pt11.m_runNet(pw_l, pw_r, laser);
+
 
 		/*
 		view[0]->set_processing(0);			//Set and Prep for original copy
@@ -235,11 +250,15 @@ int main()
 		view[0]->set_processing(10);		//Prep for sobel imagery
 		view[0]->processing();				//Do sobel imagery
 		*/
+		draw_point_rgb(view[0]->return_image(), pt_i[1], pt_j[1], 0, 0, 255);
+		draw_point_rgb(view[0]->return_image(), pt_i[3], pt_j[3], 0, 0, 255);
+
 		view[index]->view();	//View the the processed image
 		
-		pt11.set_coord(pt_i[3], pt_j[3], pt_i[0], pt_j[0]);
+		
 
-		pt11.manual_set(pw_l, pw_r, pw_laser, laser);		//Control the bot. A W D for laser, arrows for bot
+		//pt11.manual_set(pw_l, pw_r, pw_laser, laser);		//Control the bot. A W D for laser, arrows for bot
+		//enemy.manual_set(pw_l_o, pw_r_o, pw_laser_o, laser_o);
 
 		tc = high_resolution_time() - tc0;
 

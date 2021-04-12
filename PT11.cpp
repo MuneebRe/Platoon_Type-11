@@ -22,7 +22,7 @@ using namespace std;
 
 #include "Camera.h"
 #include "PT11.h"
-
+#include "NeuralNet.h"
 
 
 PT11::PT11()
@@ -33,6 +33,19 @@ PT11::PT11()
 	{
 		collision_state[i] = 0;
 	}
+	target_state = 0;
+	state_dir[0] = 0;
+	state_dir[1] = 0;
+	state_laser = 0;
+
+	for (int i = 0; i < 4; i++)
+	{
+		collision_t_flag[i] = 0;
+		collision_dt[i] = 0;
+		collision_t1[i] = 0;
+		collision_t2[i] = 0;
+	}
+
 }
 
 void PT11::manual_set(int& pw_l, int& pw_r, int& pw_laser, int& laser)
@@ -42,13 +55,15 @@ void PT11::manual_set(int& pw_l, int& pw_r, int& pw_laser, int& laser)
 	u[0] = 0;
 	u[1] = 0;
 
-	if (KEY(VK_UP)) u[0] = 200;
-	if (KEY(VK_DOWN)) u[0] = -200;
-	if (KEY(VK_RIGHT)) u[1] = -150;
-	if (KEY(VK_LEFT)) u[1] = 150;
-
+	if (KEY(VK_UP)) u[0] = 500;
+	if (KEY(VK_DOWN)) u[0] = -500;
+	if (KEY(VK_RIGHT)) u[1] = -450;
+	if (KEY(VK_LEFT)) u[1] = 450;
+	
 	this->pw_l = 1500 + u[1] - u[0];
 	this->pw_r = 1500 + u[1] + u[0];
+
+	cout << this->pw_l << "\t" << this->pw_r << endl;
 
 	pw_r = this->pw_r;
 	pw_l = this->pw_l;
@@ -67,16 +82,7 @@ void PT11::set_coord(double x1, double y1, double x2, double y2)
 	this->x2 = x2;
 	this->y2 = y2;
 
-	if (abs((y1 - y2) / (x1 - x2)) > 0.001)				//Makes theta angle continous 0 - 2 pi
-	{
-		theta = atan((y1 - y2) / (x1 - x2));
-		if (y1 - y2 > 0 && x1 - x2 > 0) theta = theta;
-		if (y1 - y2 > 0 && x1 - x2 < 0) theta = M_PI + theta;
-		if (y1 - y2 < 0 && x1 - x2 < 0) theta = M_PI + theta;
-		if (y1 - y2 < 0 && x1 - x2 > 0) theta = 2 * M_PI + theta;
-	}
-
-	//cout << x1 << "\t" << y1 << "\t" << theta << endl;
+	calculate_theta(x1, y1, x2, y2, theta);
 }
 
 void PT11::collision_points(Camera &view)
@@ -113,7 +119,7 @@ void PT11::collision_points(Camera &view)
 			{
 				arrx[j] = x1 + (Lx[i] + (LL[i] * Ln[i]) / 2.0 - LL[i] / 2.0 - j * LL[i]) * cos(theta) - (Ly[i]) * sin(theta);
 				arry[j] = y1 + (Lx[i] + (LL[i] * Ln[i]) / 2.0 - LL[i] / 2.0 - j * LL[i]) * sin(theta) + (Ly[i]) * cos(theta);
-				//draw_point_rgb(view.return_image(), arrx[j], arry[j], 0, 0, 255);
+				//draw_point_rgb(view.return_image(), arrx[j], arry[j], 255, 255, 255);
 			}
 			break;
 		case 2:
@@ -121,7 +127,7 @@ void PT11::collision_points(Camera &view)
 			{
 				arrx[j] = x1 + Lx[i] * cos(theta) - (Ly[i] + (LL[i] * Ln[i]) / 2.0 - LL[i] / 2.0 - j * LL[i]) * sin(theta);
 				arry[j] = y1 + Lx[i] * sin(theta) + (Ly[i] + (LL[i] * Ln[i]) / 2.0 - LL[i] / 2.0 - j * LL[i]) * cos(theta);
-				//draw_point_rgb(view.return_image(), arrx[j], arry[j], 0, 0, 255);
+				//draw_point_rgb(view.return_image(), arrx[j], arry[j], 255, 255, 255);
 			}
 			break;
 		case 3:
@@ -129,7 +135,7 @@ void PT11::collision_points(Camera &view)
 			{
 				arrx[j] = x1 + (Lx[i] + (LL[i] * Ln[i]) / 2.0 - LL[i] / 2.0 - j * LL[i]) * cos(theta) - (Ly[i]) * sin(theta);
 				arry[j] = y1 + (Lx[i] + (LL[i] * Ln[i]) / 2.0 - LL[i] / 2.0 - j * LL[i]) * sin(theta) + (Ly[i]) * cos(theta);
-				//draw_point_rgb(view.return_image(), arrx[j], arry[j], 0, 0, 255);
+				//draw_point_rgb(view.return_image(), arrx[j], arry[j], 255, 255, 255);
 			}
 			
 			break;
@@ -162,9 +168,11 @@ void PT11::check_collision(int arrx[], int arry[], Camera &view, int i)
 
 	for(int i2 =0; i2< Ln[i] ; i2++)	//If either point has 255 at pointer, turn on collision state
 	{
-		if (pa[k[i2]] == 255)
+		if (pa[k[i2]] == 255 && collision_t_flag[i] == 0)
 		{
+			collision_t_flag[i] = 1;
 			collision_state[i] = true;
+			collision_t1[i] = high_resolution_time();
 			break;
 		}
 	}
@@ -179,12 +187,111 @@ void PT11::check_collision(int arrx[], int arry[], Camera &view, int i)
 		}
 	}
 	//cout << "sum plus" << sum << endl;
-	if (sum >= Ln[i]) collision_state[i] = 0;
+	//if (sum >= Ln[i]) collision_state[i] = 0;
 
 	delete []k;
-
 	
-	cout << collision_state[0] << "\t" << collision_state[1] << "\t" << collision_state[2] << "\t" << collision_state[3] << endl;
+	for (int i = 0; i < 4; i++)
+	{
+
+		if (collision_state[i] == 1 && collision_t_flag[i] == 1)
+		{
+			collision_t2[i] = high_resolution_time();
+			collision_dt[i] = collision_t2[i] - collision_t1[i];
+		}
+
+		if (collision_dt[i] > 0.60 && collision_t_flag[i] == 1)
+		{
+			collision_t_flag[i] = 0;
+			collision_state[i] = 0;
+		}
+	}
+	
+	//cout << "\nAAAAAAAAAAAAAAAAAAAAAAAAA" << endl;
+	//cout << collision_state[0] << "\t" << collision_t_flag[0] << "\t" << collision_t1[0] << "\t" << collision_t2[0] << "\t" << collision_dt[0] << endl;
+
+	//cout << collision_state[0] << "\t" << collision_state[1] << "\t" << collision_state[2] << "\t" << collision_state[3] << endl;
+	
+}
+
+void PT11::calculate_theta(double x1, double y1, double x2, double y2, double &theta)
+{
+	double* temp = new double;
+	*temp = ((y1 - y2) / (x1 - x2));
+
+	if (abs(*temp) > 0.001)				//Makes theta angle continous 0 - 2 pi
+	{
+		theta = atan(*temp);
+		if (y1 - y2 >= 0 && x1 - x2 >= 0) theta = theta;
+		if (y1 - y2 >= 0 && x1 - x2 < 0) theta = M_PI + theta;
+		if (y1 - y2 < 0 && x1 - x2 < 0) theta = M_PI + theta;
+		if (y1 - y2 < 0 && x1 - x2 >= 0) theta = 2 * M_PI + theta;
+	}
+	delete temp;
+
+	//cout << x1 << "\t" << y1 << "\t" << theta << endl;
+}
+
+void PT11::find_target(PT11 enemy)
+{
+	calculate_theta(enemy.get_x1(), enemy.get_y1(), x1, y1, theta_target1);
+	calculate_theta(enemy.get_x2(), enemy.get_y2(), x1, y1, theta_target2);
+	//cout << theta_target << endl;
+
+	target_delta1 = theta_target1 - theta;
+	target_delta2 = theta_target2 - theta;
+	//cout << target_delta1 << "\t" << target_delta2 << endl;
+
+	trigger_range = 0.05;
+	
+	if (abs(target_delta1) < trigger_range || abs(target_delta2) < trigger_range){
+		target_state = 1;
+	}
+	else {
+		target_state = 0;
+	}
+
+	if (target_delta1 >= 0) { state_dir[0] = 1; }
+	else if (target_delta1 < 0) {state_dir[1] = 1; }
+
+	if (state_dir[0] == 1 && state_dir[1] == 1)
+	{
+		state_dir[0] = 1;
+		state_dir[1] = 0;
+	}
+
+	if (target_state == 1) {
+		state_dir[0] = 0;
+		state_dir[1] = 0;
+	}
+
+	//cout << target_state << "\t" << state_dir[0] << "\t" << state_dir[1] << endl;
+}
+
+void PT11::m_runNet(int& pw_l, int& pw_r, int& laser)
+{
+	
+	net_mem[0] = collision_state[0];
+	net_mem[1] = collision_state[1];
+	net_mem[2] = collision_state[2];
+	net_mem[3] = collision_state[3];
+	net_mem[4] = state_dir[0];
+	net_mem[5] = state_dir[1];
+	net_mem[6] = target_state;
+	
+	toTerminal2(net_mem, net_out);
+	
+	/*
+	for (int i = 0; i < 7; i++)
+	{
+		cout << net_mem[i] << "\t";
+	}
+	cout << endl;
+	*/
+
+	pw_l = net_out[0]*1000+1000;
+	pw_r = net_out[1]*1000+1000;
+	laser = net_out[2];
 	
 }
 

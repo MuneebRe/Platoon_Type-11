@@ -143,19 +143,20 @@ void Camera::processing()
 		hue_filter(2, 9, 0.55, 0.75, 150, 250);			//Red Filter
 		break;
 	case 7:
-		//hue_filter(20, 40, 0.4, 0.6, 200, 260);		//Orange filter
+		hue_filter(20, 40, 0.4, 0.6, 200, 260);		//Orange filter
 		break;
 	case 8:
 		hue_filter(145, 165, 0.5, 0.70, 170, 190);	//Green Filter
 		break;
 	case 9:
-		//hue_filter(190, 210, 0.7, 0.85, 218, 235);		//Blue Filter
+		hue_filter(190, 210, 0.7, 0.85, 218, 235);		//Blue Filter
 		break;
 	case 10:
 		copy(original, rgb);
 		copy(rgb, a);
 		sobel(a, mag, theta);
 		copy(theta, rgb);
+		break;
 	}
 	
 }
@@ -747,4 +748,24 @@ int Camera::sobel(image& a, image& mag, image& theta)	//Full copy paste from the
 	}
 
 	return 0;
+}
+
+void Camera::draw_border()
+{
+	for (int i = 0; i < rgb.width; i++)
+	{
+		draw_point_rgb(rgb, i, rgb.height, 0, 0, 0);
+	}
+	for (int i = rgb.height; i > 0; i--)
+	{
+		draw_point_rgb(rgb, rgb.width, i, 0, 0, 0);
+	}
+	for (int i = 0; i < rgb.width; i++)
+	{
+		draw_point_rgb(rgb, i, 0, 0, 0, 0);
+	}
+	for (int i = 0; i < rgb.height; i++)
+	{
+		draw_point_rgb(rgb, 0, i, 0, 0, 0);
+	}
 }

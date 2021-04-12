@@ -43,5 +43,7 @@ public:
 
 	int sobel(image& a, image& mag, image& theta);
 
+	void draw_border();
+
 	~Camera();
 };

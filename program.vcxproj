@@ -137,6 +137,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Camera.cpp" />
+    <ClCompile Include="NeuralNet.cpp" />
     <ClCompile Include="program.cpp" />
     <ClCompile Include="PT11.cpp" />
     <ClCompile Include="robot.cpp" />
@@ -149,6 +150,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Camera.h" />
+    <ClInclude Include="NeuralNet.h" />
     <ClInclude Include="PT11.h" />
     <ClInclude Include="Serial.h" />
     <ClInclude Include="serial_com.h" />
