@@ -66,14 +66,16 @@ void get_safe_zone(Camera* view[3], int pt_i[4], int pt_j[4]){
 	//delta_x = x1 - x0;		These should adjust as lines change
 	//delta_y = y1 - y0;
 
-	border_x = 640;		//Initialize border_x for this sweep NOTE:(should be in a loop or something eventually, since border will change to 0 at some point)
+	
 
-	for (border_y = y0 + 1; border_y < 480; border_y++) {
+	for (border_y = 0; border_y < 480; border_y++) {
 		//Scanning through right-border, all lines from centroid to wall
 		
 		if (border_y == y0) {
 			border_y++;		//safety net to avoid horizontal line which will have slope = 0 (Is this even necessary??)
 		}
+
+		border_x = 640;		//Initialize border_x for this sweep NOTE:(should be in a loop or something eventually, since border will change to 0 at some point)
 
 		delta_x = border_x - x0;
 		delta_y = border_y - y0;
@@ -91,7 +93,7 @@ void get_safe_zone(Camera* view[3], int pt_i[4], int pt_j[4]){
 			size++;
 		}
 
-		for (increment = 30; increment < size; increment++) {
+		for (increment = 0; increment < size; increment++) {
 			//Draw result so we can see what's happening
 			int x, y;
 
@@ -100,18 +102,110 @@ void get_safe_zone(Camera* view[3], int pt_i[4], int pt_j[4]){
 
 			draw_point_rgb(view[0]->return_image(), x, y, 255, 0, 0);
 		}
-		size = 0;
-	}
-	/*
-	for (increment = 30; increment < size; increment++) {
-		int x, y;
+		size = 0;		//Very important, reset array back to 0 element for next line
 
-		x = line_array_i[increment];
-		y = line_array_j[increment];
+		//I am adding line-drawing of left border in this for-loop because it uses the same y-range
 
-		draw_point_rgb(view[0]->return_image(), x, y, 255, 0, 0);
+		border_x = 0;
+
+		delta_x = border_x - x0;
+		delta_y = border_y - y0;
+
+		slope = delta_y / delta_x;
+		b = y0 - (slope * x0);
+
+		for (i = 0; i < x0; i++) {
+			//Iterate through all x-values for each line, LATER: account for vertical leaning lines
+			j = int((slope * i) + b);
+
+			line_array_i[size] = i;
+			line_array_j[size] = j;
+
+			size++;
+		}
+
+		for (increment = 0; increment < size; increment++) {
+			//Draw result so we can see what's happening
+			int x, y;
+
+			x = line_array_i[increment];
+			y = line_array_j[increment];
+
+			draw_point_rgb(view[0]->return_image(), x, y, 0, 255, 0);
+		}
+		size = 0;		//Very important, reset array back to 0 element for next line
+
 	}
-	*/
+
+	for (border_x = 0; border_x < 640; border_x++) {
+		//Scanning through top-border, all lines from centroid to wall
+
+		if (border_x == x0) {
+			border_x++;		//safety net to avoid horizontal line which will have slope = 0 (Is this even necessary??)
+		}
+
+		border_y = 480;		//Initialize border_x for this sweep NOTE:(should be in a loop or something eventually, since border will change to 0 at some point)
+
+		delta_x = border_x - x0;
+		delta_y = border_y - y0;
+
+		slope = delta_x / delta_y;
+		b = x0 - (slope * y0);
+
+		for (j = y0; j < border_y; j++) {
+			//Iterate through all x-values for each line, LATER: account for vertical leaning lines
+			i = int((slope * j) + b);
+
+			line_array_i[size] = i;
+			line_array_j[size] = j;
+
+			size++;
+		}
+
+		for (increment = 0; increment < size; increment++) {
+			//Draw result so we can see what's happening
+			int x, y;
+
+			x = line_array_i[increment];
+			y = line_array_j[increment];
+
+			draw_point_rgb(view[0]->return_image(), x, y, 0, 0, 255);
+		}
+		size = 0;		//Very important, reset array back to 0 element for next line
+
+		//I am adding line-drawing of bottom border in this for-loop because it uses the same y-range
+
+		border_y = 0;		//Initialize border_x for this sweep NOTE:(should be in a loop or something eventually, since border will change to 0 at some point)
+
+		delta_x = border_x - x0;
+		delta_y = border_y - y0;
+
+		slope = delta_x / delta_y;
+		b = x0 - (slope * y0);
+
+		for (j = 0; j < y0; j++) {
+			//Iterate through all x-values for each line, LATER: account for vertical leaning lines
+			i = int((slope * j) + b);
+
+			line_array_i[size] = i;
+			line_array_j[size] = j;
+
+			size++;
+		}
+
+		for (increment = 0; increment < size; increment++) {
+			//Draw result so we can see what's happening
+			int x, y;
+
+			x = line_array_i[increment];
+			y = line_array_j[increment];
+
+			draw_point_rgb(view[0]->return_image(), x, y, 255, 255, 0);
+		}
+		size = 0;		//Very important, reset array back to 0 element for next line
+
+	}
+
 	delete[] line_array_i;
 	delete[] line_array_j;
 }
