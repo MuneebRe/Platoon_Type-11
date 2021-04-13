@@ -36,15 +36,15 @@ void get_safe_zone(Camera* view[3], int pt_i[4], int pt_j[4]);
 
 void get_safe_zone(Camera* view[3], int pt_i[4], int pt_j[4]){
 
-	int i, j;
-	int x0, y0, x1, y1;
-	double delta_x, delta_y;
-	double slope;
-	int height, width;
-	int* line_array_i, * line_array_j;
-	int size;
+	int i, j;		//Store the i and j pixel values of the radar
+	double x0, y0, x1, y1;		//Store centroid of robot and the final point of the radar sweep
+	double delta_x, delta_y;		
+	double slope, b;
+	int height, width;		//Unnecessary if this becomes a class function, just use height and width class variable
+	int* line_array_i, * line_array_j;		//Store pixel coordinates in these dynamic arrays, delete at the end
+	int size;		//Stores size of dynamic array
 
-	int increment;
+	int increment;		//Used to increment through dynamic arrays to print rgb points
 
 	width = 640;
 	height = 480;
@@ -57,23 +57,17 @@ void get_safe_zone(Camera* view[3], int pt_i[4], int pt_j[4]){
 	x1 = 640;
 	y1 = y0 + 20;
 
-	delta_x = (double) x1 - x0;
-	delta_y = (double) y1 - y0;
-	//cout << "\ndelta_y = " << delta_y;
+	delta_x =  x1 - x0;
+	delta_y =  y1 - y0;
+	
 	slope = delta_y / delta_x;
-	//cout << "\nslope = " << slope;
+	b = y0 - (slope * x0);
 
-	for (i = x0; i < x1; i++) {
-		j = int((slope * i));
-		cout << "\ndelta_y = " << delta_y;
-		cout << "\nslope = " << slope;
-		cout << "\nj value = " << j;
-		cout << "\nsize value = " << size;
-
+	for (i = x0; i < x1-3; i++) {
+		j = int((slope * i) + b);
+		
 		line_array_i[size] = i;
 		line_array_j[size] = j;
-
-		cout << "\narray j = " << line_array_j[size];
 
 		size++;
 	}
@@ -87,7 +81,8 @@ void get_safe_zone(Camera* view[3], int pt_i[4], int pt_j[4]){
 		draw_point_rgb(view[0]->return_image(), x, y, 255, 0, 0);
 	}
 
-	
+	delete[] line_array_i;
+	delete[] line_array_j;
 }
 
 
