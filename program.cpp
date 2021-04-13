@@ -29,7 +29,10 @@ extern robot_system S1;
 #define KEY(c) ( GetAsyncKeyState((int)(c)) & (SHORT)0x8000 )
 
 /*
-
+1. Create line equation for radar (DONE)
+2. Sweep through entire image regardeless of robot positioning 
+3. Account for vertical leaning slopes (vertical leaning slopes will require the opposite: iterating through y to calculate x, watch linear equation youtube video btw)
+4. Add processing functions to analyze the line arrays when they are created, to create a mask image
 */
 
 void get_safe_zone(Camera* view[3], int pt_i[4], int pt_j[4]);
@@ -45,6 +48,8 @@ void get_safe_zone(Camera* view[3], int pt_i[4], int pt_j[4]){
 	int size;		//Stores size of dynamic array
 
 	int increment;		//Used to increment through dynamic arrays to print rgb points
+	double border_x, border_y;		//Used in greater for-loop controlling radar around borders
+								//These values are the final points of the radar line segment, they will change according to location of robot and required sweep
 
 	width = 640;
 	height = 480;
@@ -52,26 +57,52 @@ void get_safe_zone(Camera* view[3], int pt_i[4], int pt_j[4]){
 	line_array_j = new int[1000];
 	size = 0;
 	
-	x0 = pt_i[2];	//centroids of enemy_robot (orange circle)
+	x0 = pt_i[2];		//centroids of enemy_robot (orange circle)
 	y0 = pt_j[2];
-	x1 = 640;
-	y1 = y0 + 20;
-
-	delta_x =  x1 - x0;
-	delta_y =  y1 - y0;
 	
-	slope = delta_y / delta_x;
-	b = y0 - (slope * x0);
+	//x1 = 640;		Replaced by border_x, border_y
+	//y1 = y0 + 1;
+	
+	//delta_x = x1 - x0;		These should adjust as lines change
+	//delta_y = y1 - y0;
 
-	for (i = x0; i < x1-3; i++) {
-		j = int((slope * i) + b);
+	border_x = 640;		//Initialize border_x for this sweep NOTE:(should be in a loop or something eventually, since border will change to 0 at some point)
+
+	for (border_y = y0 + 1; border_y < 480; border_y++) {
+		//Scanning through right-border, all lines from centroid to wall
 		
-		line_array_i[size] = i;
-		line_array_j[size] = j;
+		if (border_y == y0) {
+			border_y++;		//safety net to avoid horizontal line which will have slope = 0 (Is this even necessary??)
+		}
 
-		size++;
+		delta_x = border_x - x0;
+		delta_y = border_y - y0;
+
+		slope = delta_y / delta_x;
+		b = y0 - (slope * x0);
+
+		for (i = x0; i < border_x - 3; i++) {
+			//Iterate through all x-values for each line, LATER: account for vertical leaning lines
+			j = int((slope * i) + b);
+
+			line_array_i[size] = i;
+			line_array_j[size] = j;
+
+			size++;
+		}
+
+		for (increment = 30; increment < size; increment++) {
+			//Draw result so we can see what's happening
+			int x, y;
+
+			x = line_array_i[increment];
+			y = line_array_j[increment];
+
+			draw_point_rgb(view[0]->return_image(), x, y, 255, 0, 0);
+		}
+		size = 0;
 	}
-
+	/*
 	for (increment = 30; increment < size; increment++) {
 		int x, y;
 
@@ -80,7 +111,7 @@ void get_safe_zone(Camera* view[3], int pt_i[4], int pt_j[4]){
 
 		draw_point_rgb(view[0]->return_image(), x, y, 255, 0, 0);
 	}
-
+	*/
 	delete[] line_array_i;
 	delete[] line_array_j;
 }
