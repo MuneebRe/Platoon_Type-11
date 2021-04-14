@@ -17,6 +17,9 @@ private:
 public:
 	Camera(bool state, int cam_number, int width, int height, int type, bool is_simulator, int processing_type);
 	int get_cam_number() { return cam_number; }
+	int get_width() { return width; }
+	int get_height() { return height; }
+	int get_type() { return type; }
 	bool get_state() { return state; }
 	void view();
 	void processing();

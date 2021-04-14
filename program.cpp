@@ -35,6 +35,7 @@ extern robot_system S1;
 4. Add processing functions to analyze the line arrays when they are created, to create a mask image
 */
 
+/*
 void get_safe_zone(Camera* view[3], int pt_i[4], int pt_j[4]);
 
 void get_safe_zone(Camera* view[3], int pt_i[4], int pt_j[4]){
@@ -93,7 +94,7 @@ void get_safe_zone(Camera* view[3], int pt_i[4], int pt_j[4]){
 			size++;
 		}
 
-		for (increment = 0; increment < size; increment++) {
+		for (increment = 30; increment < size; increment++) {
 			//Draw result so we can see what's happening
 			int x, y;
 
@@ -114,8 +115,8 @@ void get_safe_zone(Camera* view[3], int pt_i[4], int pt_j[4]){
 		slope = delta_y / delta_x;
 		b = y0 - (slope * x0);
 
-		for (i = 0; i < x0; i++) {
-			//Iterate through all x-values for each line, LATER: account for vertical leaning lines
+		for (i = x0; i > border_x; i-= 1) {
+			//Iterate through all x-values for each line (Lines start from centroid as if laser is shooting out)
 			j = int((slope * i) + b);
 
 			line_array_i[size] = i;
@@ -124,7 +125,7 @@ void get_safe_zone(Camera* view[3], int pt_i[4], int pt_j[4]){
 			size++;
 		}
 
-		for (increment = 0; increment < size; increment++) {
+		for (increment = 30; increment < size; increment++) {
 			//Draw result so we can see what's happening
 			int x, y;
 
@@ -162,7 +163,7 @@ void get_safe_zone(Camera* view[3], int pt_i[4], int pt_j[4]){
 			size++;
 		}
 
-		for (increment = 0; increment < size; increment++) {
+		for (increment = 30; increment < size; increment++) {
 			//Draw result so we can see what's happening
 			int x, y;
 
@@ -183,7 +184,7 @@ void get_safe_zone(Camera* view[3], int pt_i[4], int pt_j[4]){
 		slope = delta_x / delta_y;
 		b = x0 - (slope * y0);
 
-		for (j = 0; j < y0; j++) {
+		for (j = y0; j > border_y; j-=1) {
 			//Iterate through all x-values for each line, LATER: account for vertical leaning lines
 			i = int((slope * j) + b);
 
@@ -193,7 +194,7 @@ void get_safe_zone(Camera* view[3], int pt_i[4], int pt_j[4]){
 			size++;
 		}
 
-		for (increment = 0; increment < size; increment++) {
+		for (increment = 30; increment < size; increment++) {
 			//Draw result so we can see what's happening
 			int x, y;
 
@@ -209,7 +210,7 @@ void get_safe_zone(Camera* view[3], int pt_i[4], int pt_j[4]){
 	delete[] line_array_i;
 	delete[] line_array_j;
 }
-
+*/
 
 
 int main()
@@ -351,7 +352,7 @@ int main()
 
 	Serial port(false, "COM12", 1);		//Establish bluetooth communication with robot (real)
 
-	PT11 pt11;		//Make instance of robot (sim)
+	PT11 pt11(*view[0]);		//Make instance of robot (sim)
 
 	// measure initial clock time
 	tc0 = high_resolution_time(); 
@@ -372,8 +373,17 @@ int main()
 		}
 
 		view[index]->acquire();					//Get RGB image
+		pt11.acquire_camera_image(*view[0]);	//Make a copy of the RGB image to pt11
 
 		view[0]->set_processing(0);			//Set and Prep for original copy
+		view[0]->processing();				//Make a copy of the rgb image
+
+		view[0]->set_processing(1);			//Threshold image 'a' so pt11 can copy it
+		view[0]->processing();				
+
+		pt11.acquire_camera_image(*view[0]);	//Make a copy of the thresholded 'a' image to greyscale so I can do processing on the binary image
+
+		view[0]->set_processing(3);			//Set and Prep for original copy
 		view[0]->processing();				//Make a copy of the rgb image
 
 		/*
@@ -427,7 +437,7 @@ int main()
 		view[0]->processing();				//Do sobel imagery
 		*/
 
-		get_safe_zone(view, pt_i, pt_j);
+		pt11.get_safe_zone(*view[0], pt_i, pt_j);		//This function draws directly onto the latest RGB before its viewed on screen
 
 		view[index]->view();	//View the the processed image
 		
