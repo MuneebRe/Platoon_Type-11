@@ -1,5 +1,9 @@
 #pragma once
 # define M_PI           3.14159265358979323846  /* pi */
+#include "Neural_Network/NeuroNet.h"
+#include "Neural_Network/Input.h"
+#include "Neural_Network/Hidden.h"
+#include "Neural_Network/Output.h"
 
 class PT11
 {
@@ -16,6 +20,7 @@ public:
 	bool net_mem[7];
 	double net_out[3];
 
+
 private:
 	double x1,x2, dx, ddx;
 	double y1,y2, dy, ddy;
@@ -26,12 +31,19 @@ private:
 	bool target_state;
 	bool state_laser;
 	bool state_dir[2];	//Trigger to determine which side enemy located
+	bool flag_reset;
 
+	int Lx[8];
+	int Ly[8];
+	int LL[8];
+	int Ln[8];
 
-	int Lx[4];
-	int Ly[4];
-	int LL[4];
-	int Ln[4];
+	int Ax[8];
+	int Ay[8];
+	double AF[8];
+	double distance_log[8];
+
+	Neural_Net* topology;
 
 public:
 	PT11();
@@ -46,8 +58,15 @@ public:
 	double get_x2() { return x2; }
 	double get_y2() { return y2; }
 	void calculate_theta(double x1, double y1, double x2, double y2, double &theta);
+	bool get_reset_state() { return flag_reset; }
+
+	void distance_sensor(Camera& view, PT11 enemy);
+	void distance_input(int arrx[], int arry[], Camera& view, int i);
+	void is_obstacle_before_enemy(int arrx[], int arry[], PT11 enemy);
 
 	void m_runNet(int& pw_l, int& pw_r, int& laser);
 	//void NeuroNet(int pw_l, int pw_r);
+	void NeuroLearn(int& pw_l, int& pw_r, int& laser, double &trial_number);
+
 	~PT11();
 };

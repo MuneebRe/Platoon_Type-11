@@ -31,6 +31,7 @@ extern robot_system S1;
 
 int main()
 {
+	
 	double x0, y0, theta0, max_speed, opponent_max_speed;
 	int pw_l, pw_r, pw_laser, laser;
 	double light, light_gradient, light_dir, image_noise;
@@ -41,7 +42,7 @@ int main()
 	double tc, tc0; // clock time
 	int mode, level;
 	int pw_l_o, pw_r_o, pw_laser_o, laser_o;
-	
+
 	// note that the vision simulation library currently
 	// assumes an image size of 640x480
 	width1  = 640;
@@ -79,7 +80,7 @@ int main()
 	n_robot = 2;
 	
 	cout << "\npress space key to begin program.";
-	pause();
+	//pause();
 
 	activate_vision();
 
@@ -97,7 +98,20 @@ int main()
 	// mode = 2 - two player mode, player #2	
 	mode = 0;
 	level = 1;
-	set_simulation_mode(mode,level);	
+	set_simulation_mode(mode,level);
+
+	int view_state[3] = { true, false, false };	//Defines if enabled/disabled Simulator, Top View Cam, First Person Cam
+
+	Camera* view[3];
+
+	view[0] = new Camera(view_state[0], 0, 640, 480, RGB_IMAGE, true, 1);	 //Simulator		   (sim)
+	view[1] = new Camera(view_state[1], 0, 640, 480, RGB_IMAGE, false, 0);	 //Top View Camera	   (real)
+	view[2] = new Camera(view_state[2], 1, 640, 480, RGB_IMAGE, false, 0);   //First Person Camera (real)
+	
+
+	while (1)
+	{
+	static double trial_number = 0;
 	
 	// set robot initial position (pixels) and angle (rad)
 	x0 = 470;
@@ -159,17 +173,10 @@ int main()
 	int pt_i[4];	//x Point locations of the "colored" parts of both robots
 	int pt_j[4];	//y Point locations of the "colored" parts of both robots
 
-	int view_state[3] = { true, false, false };	//Defines if enabled/disabled Simulator, Top View Cam, First Person Cam
-
-	Camera* view[3];
-	view[0] = new Camera(view_state[0], 0, 640, 480, RGB_IMAGE, true, 1);	 //Simulator		   (sim)
-	view[1] = new Camera(view_state[1], 0, 640, 480, RGB_IMAGE, false, 0);	 //Top View Camera	   (real)
-	view[2] = new Camera(view_state[2], 0, 640, 480, RGB_IMAGE, false, 0);   //First Person Camera (real)
-
-	Serial port(false, "COM12", 1);		//Establish bluetooth communication with robot (real)
+	//Serial port(false, "COM12", 1);		//Establish bluetooth communication with robot (real)
 
 	PT11 pt11;		//Make instance of robot (sim)
-	runNet();
+	//runNet();
 
 	PT11 enemy;		//Make instance of enemy
 
@@ -179,106 +186,118 @@ int main()
 	
 	//view[0]->find_object();    //Testing for "tracking" lecture, pick a white spot. Press 'c' to select.
 
-	while(1) {
+		while(1) {
+			
+			//port.send(0, 0, 0, 0);		//Send control order to robot (real)
 
-		port.send(0, 0, 0, 0);		//Send control order to robot (real)
+			if (index > view[0]->get_count() - 1) index = 0;	//Roll back view number
+			if (KEY('V') || view_state[index] == false)			//*Only used if using real camera
+			{													//*Changes views
+				index++;
+				Sleep(350);
+				continue;
+			}
 
-		if (index > view[0]->get_count() - 1) index = 0;	//Roll back view number
-		if (KEY('V') || view_state[index] == false)			//*Only used if using real camera
-		{													//*Changes views
-			index++;
-			Sleep(350);
-			continue;
-		}
+			view[index]->acquire();					//Get RGB image
+			//view[0]->acquire();					//Get RGB image
+			view[index]->draw_border();
+			//view[0]->draw_border();
 
-		view[index]->acquire();					//Get RGB image
+			view[0]->set_processing(0);			//Set and Prep for original copy
+			view[0]->processing();				//Make a copy of the rgb image
 
-		view[index]->draw_border();
+			/*
+			view[0]->set_processing(1);			//Prepare rgb image for process used to keep tracking
+			view[0]->track_object();			//Track object selected from view[0]->find_object();
 
-		view[0]->set_processing(0);			//Set and Prep for original copy
-		view[0]->processing();				//Make a copy of the rgb image
+			view[0]->set_processing(3);			//Copy original image to current rgb image
+			view[0]->processing();				//Also, add a point to the "tracked" object
 
-		/*
-		view[0]->set_processing(1);			//Prepare rgb image for process used to keep tracking
-		view[0]->track_object();			//Track object selected from view[0]->find_object();
+			//view[0]->set_processing(4);
+			//view[0]->processing();
 
-		view[0]->set_processing(3);			//Copy original image to current rgb image
-		view[0]->processing();				//Also, add a point to the "tracked" object
+			//view[0]->set_processing(5);
+			//view[0]->processing();
+			*/
+			view[0]->set_processing(0);			//Set and Prep for original copy
+			view[0]->processing();				//Make a copy of the rgb image
 
-		//view[0]->set_processing(4);
-		//view[0]->processing();
+			for (int i = 6; i < 10; i++)
+			{
+				view[0]->set_processing(i);		//Run filter for blue, orange, green and red
+				view[0]->processing();			//to find centroid location for each
+				pt_i[i-6] = view[0]->get_ic();	//And put them in this array
+				pt_j[i-6] = view[0]->get_jc();	//For each color
+			}
 
-		//view[0]->set_processing(5);
-		//view[0]->processing();
-		*/
-		view[0]->set_processing(0);			//Set and Prep for original copy
-		view[0]->processing();				//Make a copy of the rgb image
-
-		for (int i = 6; i < 10; i++)
-		{
-			view[0]->set_processing(i);		//Run filter for blue, orange, green and red
-			view[0]->processing();			//to find centroid location for each
-			pt_i[i-6] = view[0]->get_ic();	//And put them in this array
-			pt_j[i-6] = view[0]->get_jc();	//For each color
-		}
-
-		/*
-		for (int i = 0; i < 4; i++)
-		{
-			draw_point_rgb(view[0]->return_image(), pt_i[i], pt_j[i], 0, 0, 255); //Call back array and draw point at those locations
-		}
-		*/
+			/*
+			for (int i = 0; i < 4; i++)
+			{
+				draw_point_rgb(view[0]->return_image(), pt_i[i], pt_j[i], 0, 0, 255); //Call back array and draw point at those locations
+			}
+			*/
 
 
 		
-		view[0]->set_processing(1);			//Enable threshold processing and everything
-		view[0]->processing();				//Run process
-		pt11.collision_points(*view[0]);	//Move view[0] object into pt11 function
-		pt11.set_coord(pt_i[2], pt_j[2], pt_i[0], pt_j[0]);
+			view[0]->set_processing(1);			//Enable threshold processing and everything
+			view[0]->processing();				//Run process
+			pt11.collision_points(*view[0]);	//Move view[0] object into pt11 function
+			pt11.distance_sensor(*view[0], enemy);
+			pt11.find_target(enemy);
+			pt11.set_coord(pt_i[2], pt_j[2], pt_i[0], pt_j[0]);
 
-		enemy.set_coord(pt_i[1], pt_j[1], pt_i[3], pt_j[3]);
-		//cout << "theta = " << enemy.get_theta() << endl;;
-		pt11.find_target(enemy);
+			enemy.set_coord(pt_i[1], pt_j[1], pt_i[3], pt_j[3]);
+			//cout << "theta = " << enemy.get_theta() << endl;;
 
-		pt11.m_runNet(pw_l, pw_r, laser);
+			////pt11.m_runNet(pw_l, pw_r, laser);
+			
+			pt11.NeuroLearn(pw_l, pw_r, laser, trial_number);
+
+			//pt11.manual_set(pw_l, pw_r, pw_laser, laser);		//Control the bot. A W D for laser, arrows for bot
+			//enemy.manual_set(pw_l_o, pw_r_o, pw_laser_o, laser_o);
+
+			/*
+			view[0]->set_processing(0);			//Set and Prep for original copy
+			view[0]->processing();				//Make a copy of the rgb image
+
+			view[0]->set_processing(10);		//Prep for sobel imagery
+			view[0]->processing();				//Do sobel imagery
+			*/
+			draw_point_rgb(view[0]->return_image(), pt_i[1], pt_j[1], 0, 0, 255);
+			draw_point_rgb(view[0]->return_image(), pt_i[3], pt_j[3], 0, 0, 255);
+
+			view[index]->view();	//View the the processed image
+			//view[0]->view();
 
 
-		/*
-		view[0]->set_processing(0);			//Set and Prep for original copy
-		view[0]->processing();				//Make a copy of the rgb image
+			tc = high_resolution_time() - tc0;
 
-		view[0]->set_processing(10);		//Prep for sobel imagery
-		view[0]->processing();				//Do sobel imagery
-		*/
-		draw_point_rgb(view[0]->return_image(), pt_i[1], pt_j[1], 0, 0, 255);
-		draw_point_rgb(view[0]->return_image(), pt_i[3], pt_j[3], 0, 0, 255);
+			set_inputs(pw_l,pw_r,pw_laser,laser,
+				light,light_gradient,light_dir,image_noise,
+				max_speed,opponent_max_speed);
 
-		view[index]->view();	//View the the processed image
-		
-		
+			set_opponent_inputs(pw_l_o, pw_r_o, pw_laser_o, laser_o, 
+						opponent_max_speed);
 
-		//pt11.manual_set(pw_l, pw_r, pw_laser, laser);		//Control the bot. A W D for laser, arrows for bot
-		enemy.manual_set(pw_l_o, pw_r_o, pw_laser_o, laser_o);
+			// don't need to simulate too fast
+			Sleep(10); // 100 fps max
 
-		tc = high_resolution_time() - tc0;
+			if (pt11.get_reset_state() == 1)
+			{
+				trial_number += 0.5;
+				//Sleep(800);
+				break;
+				
+			}
+		}
 
-		set_inputs(pw_l,pw_r,pw_laser,laser,
-			light,light_gradient,light_dir,image_noise,
-			max_speed,opponent_max_speed);
-
-		set_opponent_inputs(pw_l_o, pw_r_o, pw_laser_o, laser_o, 
-					opponent_max_speed);
-
-		// don't need to simulate too fast
-		Sleep(10); // 100 fps max
 	}
-
-
 	// free the image memory before the program completes
 
 	deactivate_vision();
 	
 	deactivate_simulation();	
+	
 	
 	cout << "\ndone.\n";
 

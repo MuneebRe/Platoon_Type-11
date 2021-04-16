@@ -24,6 +24,11 @@ using namespace std;
 #include "PT11.h"
 #include "NeuralNet.h"
 
+#include "Neural_Network/NeuroNet.h"
+#include "Neural_Network/Input.h"
+#include "Neural_Network/Hidden.h"
+#include "Neural_Network/Output.h"
+
 
 PT11::PT11()
 {
@@ -51,6 +56,15 @@ PT11::PT11()
 	collision_dt_target[2] = 1.00;
 	collision_dt_target[3] = 0.90;
 
+	for (int i = 0; i < 8; i++)
+	{
+		distance_log[i] = 0;
+	}
+
+	topology = new Neural_Net(8, 10, 3);
+
+	flag_reset = 0;
+
 }
 
 void PT11::manual_set(int& pw_l, int& pw_r, int& pw_laser, int& laser)
@@ -68,7 +82,7 @@ void PT11::manual_set(int& pw_l, int& pw_r, int& pw_laser, int& laser)
 	this->pw_l = 1500 + u[1] - u[0];
 	this->pw_r = 1500 + u[1] + u[0];
 
-	cout << this->pw_l << "\t" << this->pw_r << endl;
+	//cout << this->pw_l << "\t" << this->pw_r << endl;
 
 	pw_r = this->pw_r;
 	pw_l = this->pw_l;
@@ -99,9 +113,9 @@ void PT11::collision_points(Camera &view)
 	//Basically, there are dots on all sides of the car to detect collision.
 	//I had to comment out draw_point_rgb because it messes up with check_collision( )
 
-	Lx[0] = 60;		Ly[0] = 0;		LL[0] = 20;		Ln[0] = 6;
-	Lx[1] = -40;	Ly[1] = -50;	LL[1] = 30;		Ln[1] = 6;
-	Lx[2] = -120;	Ly[2] = 0;		LL[2] = 20;		Ln[2] = 6;
+	Lx[0] = 40;		Ly[0] = 0;		LL[0] = 20;		Ln[0] = 5;
+	Lx[1] = -40;	Ly[1] = -45;	LL[1] = 30;		Ln[1] = 6;
+	Lx[2] = -120;	Ly[2] = 0;		LL[2] = 20;		Ln[2] = 5;
 	Lx[3] = -40;	Ly[3] = 50;		LL[3] = 30;		Ln[3] = 6;
 
 	for (int i = 0; i < 4; i++)
@@ -109,7 +123,7 @@ void PT11::collision_points(Camera &view)
 		int* arrx = new int[Ln[i]];		//Dynamic memory, can change number of points interested in using
 		int* arry = new int[Ln[i]];		//Kinda like resolution. More points can make it a line
 
-		bool flag =0;
+		bool flag = 0;
 		
 		switch (i)						//Different sides, different line rotation. Same for [0] & [2] - [1] & [3]
 		{
@@ -153,6 +167,241 @@ void PT11::collision_points(Camera &view)
 		delete[]arry;
 	}
 
+}
+
+void PT11::distance_sensor(Camera& view, PT11 enemy)
+{	
+	Lx[0] = 30;		Ly[0] = 0;		LL[0] = 10;		Ln[0] = 80;			//Front
+	Lx[1] = -20;	Ly[1] = -55;	LL[1] = 8;		Ln[1] = 20;			//Front Right
+	Lx[2] = -40;	Ly[2] = 0;		LL[2] = 10;		Ln[2] = 20;			//Right
+	Lx[3] = -100;	Ly[3] = -10;	LL[3] = 8;		Ln[3] = 20;			//Back Right
+	Lx[4] = 40;		Ly[4] = 0;		LL[4] = 10;		Ln[4] = 20;			//Back
+	Lx[5] = Lx[3];	Ly[5] = -Ly[3];	LL[5] = LL[3];	Ln[5] = Ln[3];		//Back Left
+	Lx[6] = Lx[2];	Ly[6] = Ly[2];	LL[6] = LL[2];	Ln[6] = Ln[2];		//Left
+	Lx[7] = Lx[1];	Ly[7] = -Ly[1];	LL[7] = LL[1];	Ln[7] = Ln[1];		//Top Left
+
+	Ax[0] = 20;		Ay[0] = 0;		AF[0] = 0.0;
+	Ax[1] = 30;		Ay[1] = 0;		AF[1] = -1.0;
+	Ax[2] = 0;		Ay[2] = -30;	AF[2] = 0.0;
+	Ax[3] = 0;		Ay[3] = -30;	AF[3] = -1.0;
+	Ax[4] = -165;	Ay[4] = Ay[0];	AF[4] = 0.0;
+	Ax[5] = 0;		Ay[5] = 30;		AF[5] = 1.0;
+	Ax[6] = 0;		Ay[6] = -Ay[2];	AF[6] = 0.0;
+	Ax[7] = 30;		Ay[7] = -Ay[1];	AF[7] = 1.0;
+
+	for (int i = 0; i < 8; i++)
+	{
+		int* arrx = new int[Ln[i]];		//Dynamic memory, can change number of points interested in using
+		int* arry = new int[Ln[i]];		//Kinda like resolution. More points can make it a line
+
+		bool flag = 0;
+
+		switch (i)
+		{
+		case 0:
+			for (int j = 0; j < Ln[i]; j++)
+			{
+				arrx[j] = x1 + Lx[i] * cos(theta) - Ly[i] * sin(theta);
+				arry[j] = y1 + Lx[i] * sin(theta) + Ly[i] * cos(theta);
+
+				arrx[j] += (Ax[i] + LL[i] * j) * cos(theta) - (Ay[i] + LL[i] * j* AF[i]) * sin(theta);
+				arry[j] += (Ax[i] + LL[i] * j) * sin(theta) + (Ay[i] + LL[i] * j* AF[i]) * cos(theta);
+				if (flag == 1) draw_point_rgb(view.return_image(), arrx[j], arry[j], 255, 255, 255);
+			}
+			is_obstacle_before_enemy(arrx, arry, enemy);
+			break;
+		case 1:
+			for (int j = 0; j < Ln[i]; j++)
+			{
+				arrx[j] = x1 + Lx[i] * cos(theta) - Ly[i] * sin(theta);
+				arry[j] = y1 + Lx[i] * sin(theta) + Ly[i] * cos(theta);
+
+				arrx[j] += (Ax[i] + LL[i] * j) * cos(theta) - (Ay[i] + LL[i] * j * AF[i]) * sin(theta);
+				arry[j] += (Ax[i] + LL[i] * j) * sin(theta) + (Ay[i] + LL[i] * j * AF[i]) * cos(theta);
+				distance_input(arrx, arry, view, i);
+				if (flag == 1) draw_point_rgb(view.return_image(), arrx[j], arry[j], 255, 255, 255);
+			}
+			break;
+
+		case 2:
+			for (int j = 0; j < Ln[i]; j++)
+			{
+				arrx[j] = x1 + Lx[i] * cos(theta) - Ly[i] * sin(theta);
+				arry[j] = y1 + Lx[i] * sin(theta) + Ly[i] * cos(theta);
+
+				arrx[j] += (Ax[i]) * cos(theta) - (Ay[i] - LL[i] * j) * sin(theta);
+				arry[j] += (Ax[i]) * sin(theta) + (Ay[i] - LL[i] * j) * cos(theta);
+				if (flag == 1) draw_point_rgb(view.return_image(), arrx[j], arry[j], 255, 255, 255);
+			}
+			break;
+		case 3:
+			for (int j = 0; j < Ln[i]; j++)
+			{
+				arrx[j] = x1 + Lx[i] * cos(theta) - Ly[i] * sin(theta);
+				arry[j] = y1 + Lx[i] * sin(theta) + Ly[i] * cos(theta);
+
+				arrx[j] += (Ax[i] + LL[i] * j * AF[i]) * cos(theta) - (Ay[i] - LL[i] * j) * sin(theta);
+				arry[j] += (Ax[i] + LL[i] * j * AF[i]) * sin(theta) + (Ay[i] - LL[i] * j) * cos(theta);
+				if (flag == 1) draw_point_rgb(view.return_image(), arrx[j], arry[j], 255, 255, 255);
+			}
+			break;
+		case 4:
+			for (int j = 0; j < Ln[i]; j++)
+			{
+				arrx[j] = x1 + Lx[i] * cos(theta) - Ly[i] * sin(theta);
+				arry[j] = y1 + Lx[i] * sin(theta) + Ly[i] * cos(theta);
+
+				arrx[j] += (Ax[i] - LL[i] * j) * cos(theta) - (Ay[i]) * sin(theta);
+				arry[j] += (Ax[i] - LL[i] * j) * sin(theta) + (Ay[i]) * cos(theta);
+				if (flag == 1) draw_point_rgb(view.return_image(), arrx[j], arry[j], 255, 255, 255);
+			}
+			break;
+		case 5:
+			for (int j = 0; j < Ln[i]; j++)
+			{
+				arrx[j] = x1 + Lx[i] * cos(theta) - Ly[i] * sin(theta);
+				arry[j] = y1 + Lx[i] * sin(theta) + Ly[i] * cos(theta);
+
+				arrx[j] += (Ax[i] - LL[i] * j) * cos(theta) - (Ay[i] + LL[i] * j * AF[i]) * sin(theta);
+				arry[j] += (Ax[i] - LL[i] * j) * sin(theta) + (Ay[i] + LL[i] * j * AF[i]) * cos(theta);
+				if (flag == 1) draw_point_rgb(view.return_image(), arrx[j], arry[j], 255, 255, 255);
+			}
+			break;
+		case 6:
+			for (int j = 0; j < Ln[i]; j++)
+			{
+				arrx[j] = x1 + Lx[i] * cos(theta) - Ly[i] * sin(theta);
+				arry[j] = y1 + Lx[i] * sin(theta) + Ly[i] * cos(theta);
+
+				arrx[j] += (Ax[i]) * cos(theta) - (Ay[i] + LL[i] * j) * sin(theta);
+				arry[j] += (Ax[i]) * sin(theta) + (Ay[i] + LL[i] * j) * cos(theta);
+				if (flag == 1) draw_point_rgb(view.return_image(), arrx[j], arry[j], 255, 255, 255);
+			}
+			break;
+		case 7:
+			for (int j = 0; j < Ln[i]; j++)
+			{
+				arrx[j] = x1 + Lx[i] * cos(theta) - Ly[i] * sin(theta);
+				arry[j] = y1 + Lx[i] * sin(theta) + Ly[i] * cos(theta);
+
+				arrx[j] += (Ax[i] + LL[i] * j * AF[i] ) * cos(theta) - (Ay[i] + LL[i] * j) * sin(theta);
+				arry[j] += (Ax[i] + LL[i] * j * AF[i] ) * sin(theta) + (Ay[i] + LL[i] * j) * cos(theta);
+				if (flag == 1) draw_point_rgb(view.return_image(), arrx[j], arry[j], 255, 255, 255);
+			}
+			break;
+		}
+
+		distance_input(arrx, arry, view, i);
+		
+		delete[]arrx;
+		delete[]arry;
+
+		//cout << distance_log[i] << "\t";
+		//if (i == 7) cout << endl;
+	}
+	
+}
+
+void PT11::distance_input(int arrx[], int arry[], Camera& view, int i)
+{
+	//Since we're using stuff from the threshold, it's better to use the grey image type instead of rgb image,
+	//So we're using "a" image from view[0]
+
+	copy(view.return_image(), view.return_a());
+
+	ibyte* pa;
+
+	pa = view.return_a().pdata;
+
+	int* k = new int[Ln[i]];	//Can vary length of point series for collision accuracy
+
+
+	for (int i2 = 0; i2 < Ln[i]; i2++)	//For each dot on the line of points, find position based on 1D image reference
+	{
+		if (arrx[i2] > 0 && arrx[i2] < view.return_a().width && arry[i2] > 0 && arry[i2] < view.return_a().height)
+		{
+			k[i2] = arrx[i2] + view.return_a().width * arry[i2];
+		}
+		else {
+			k[i2] = 1 + view.return_a().width;
+		}
+	}
+
+	for (int i2 = 0; i2 < Ln[i]; i2++)	//If either point has 255 at pointer, turn on collision state
+	{
+		
+		if (arrx[i2] < 0 || arrx[i2] > view.return_a().width || arry[i2] < 0 || arry[i2] > view.return_a().height)
+		{
+			pa[k[i2]] = 255;
+			break;
+		}
+		
+		//cout << (int)pa[k[i2]] << "\t" << i2 << endl;
+		if (pa[k[i2]] == 255)
+		{
+			//cout << i2 << endl;
+			distance_log[i] = i2;
+			break;
+		}
+	}
+
+
+	delete[]k;
+
+
+}
+
+void PT11::is_obstacle_before_enemy(int arrx[], int arry[], PT11 enemy)
+{
+
+	//int distance_enemy1 = sqrt(pow(enemy.get_x1() - x1, 2) + pow(enemy.get_y1() - y1, 2));
+	//int distance_enemy2 = sqrt(pow(enemy.get_x2() - x1, 2) + pow(enemy.get_y2() - y1, 2));
+	int enemy_no_obs1;
+	int enemy_no_obs2;
+
+	//cout << distance_enemy1 << "  |  " << distance_enemy2 << "  |  " << distance_log[0]*LL[0]<< endl;
+
+	int box_length = 30;
+
+	for (int i = 0; i < Ln[0]; i++)
+	{
+		if (arrx[i] > enemy.get_x1() - box_length && arrx[i] < enemy.get_x1() + box_length &&
+			arry[i] > enemy.get_y1() - box_length && arry[i] < enemy.get_y1() + box_length)
+		{
+			enemy_no_obs1 = i * LL[0];
+			break;
+		}
+		else {
+			enemy_no_obs1 = 0;
+		}
+	}
+
+	for (int i = 0; i < Ln[0]; i++)
+	{
+		if (arrx[i] > enemy.get_x2() - box_length && arrx[i] < enemy.get_x2() + box_length &&
+			arry[i] > enemy.get_y2() - box_length && arry[i] < enemy.get_y2() + box_length)
+		{
+			enemy_no_obs2 = i * LL[0];
+			break;
+		}
+		else {
+			enemy_no_obs2 = 0;
+		}
+	}
+
+	if (target_state == 1 &&
+		(distance_log[0] * LL[0] < enemy_no_obs1 || distance_log[0] * LL[0] < enemy_no_obs2))
+	{
+		target_state = 0;
+	}
+
+	//cout << target_state << endl;
+	/*
+	cout << distance_log[0] << " ! " << enemy_no_obs1 << endl;
+
+	if (distance_log[0] * LL[0] < enemy_no_obs2) cout << "Obstacle behind enemy front target" << endl;
+	cout << distance_log[0] << " ! " << enemy_no_obs2 << endl;
+	*/
 }
 
 void PT11::check_collision(int arrx[], int arry[], Camera &view, int i)
@@ -306,6 +555,63 @@ void PT11::m_runNet(int& pw_l, int& pw_r, int& laser)
 	pw_l = net_out[0]*1000+1000;
 	pw_r = net_out[1]*1000+1000;
 	laser = net_out[2];
+	
+}
+
+void PT11::NeuroLearn(int& pw_l, int& pw_r, int& laser, double &trial_number)
+{
+	static int fitness = 0;
+
+	bool init = 0;
+
+	if (init == 0)
+	{
+		topology->randomize_weights();
+
+		init = 1;
+	}
+
+	if (collision_state[0] == 1 || collision_state[1] == 1 || collision_state[2] == 1 || collision_state[3] == 1 || KEY('O'))
+	{
+		flag_reset = 1;
+		topology->set_trial_number(trial_number);
+		topology->set_finess_number(fitness);
+		topology->save_weights();
+		fitness = 0;
+		Sleep(800);
+	}
+
+	if (trial_number == 0)
+	{
+		topology->find_best();
+		trial_number = 0;
+	}
+	//topology->find_best();
+	//cout << flag_reset << endl;
+	
+
+	
+	topology->input[0].set_value(collision_state[0]);
+	topology->input[1].set_value(collision_state[1]);
+	topology->input[2].set_value(collision_state[2]);
+	topology->input[3].set_value(collision_state[3]);
+	topology->input[4].set_value(state_dir[0]);
+	topology->input[5].set_value(state_dir[1]);
+	topology->input[6].set_value(target_state);
+	
+	if (target_state == 1) fitness++;
+	cout << fitness << endl;
+
+
+	topology->calculate_hidden();
+	topology->calculate_output();
+	//topology->print_inputs();
+	//topology->print_hidden();
+	//topology->print_output();
+
+	pw_l = topology->output[0].get_value() * 1000 + 1000;
+	pw_r = topology->output[1].get_value() * 1000 + 1000;
+	laser = topology->output[2].get_value();
 	
 }
 
