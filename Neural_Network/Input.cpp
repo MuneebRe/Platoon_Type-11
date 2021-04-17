@@ -15,7 +15,7 @@ void Input::out_nodes(int nb_hidden)
 
     for (int i = 0; i < nb_hidden; i++)
     {
-        weight[i] = 1.0;
+        weight[i] = 0.0;
     }
     
 }

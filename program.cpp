@@ -48,6 +48,7 @@ int main()
 	width1  = 640;
 	height1 = 480;
 	
+
 	// number of obstacles
 	N_obs  = 2;
 
@@ -55,8 +56,8 @@ int main()
 	y_obs[1] = 270; // pixels
 	size_obs[1] = 1.0; // scale factor 1.0 = 100% (not implemented yet)	
 
-	x_obs[2] = 135; // pixels
-	y_obs[2] = 135; // pixels
+	x_obs[2] = 330;// 135; // pixels
+	y_obs[2] = 330;// 135; // pixels
 	size_obs[2] = 1.0; // scale factor 1.0 = 100% (not implemented yet)	
 
 	// set robot model parameters ////////
@@ -111,8 +112,8 @@ int main()
 
 	while (1)
 	{
-	static double trial_number = 0;
-	
+	static int trial_number = 0;
+	cout << "Trial Number " << trial_number << " begin!" << endl;
 	// set robot initial position (pixels) and angle (rad)
 	x0 = 470;
 	y0 = 170;
@@ -175,10 +176,25 @@ int main()
 
 	//Serial port(false, "COM12", 1);		//Establish bluetooth communication with robot (real)
 
+	//Enable Neural Network for enemy?
+	static bool AI_enemy = 1;	//REF1-1 enemy will follow weight pattern as pt11
+
 	PT11 pt11;		//Make instance of robot (sim)
+	PT11 enemy;		//Make instance of enemy
+
+	pt11.init_neural();		//REF1-2 Load latest weight data, then randomize it (either relative to best one or fully random)
+	if(AI_enemy == 1) enemy.init_neural();
+
+	static int init1 = 0;
+	if (init1 == 0)
+	{
+		//pt11.load_best();
+		//cout << "THISTHINIGNSIHISHAODASIOD" << endl;
+		init1 = 1;
+	}
 	//runNet();
 
-	PT11 enemy;		//Make instance of enemy
+	
 
 	// measure initial clock time
 	tc0 = high_resolution_time(); 
@@ -237,24 +253,33 @@ int main()
 			}
 			*/
 
-
+			pt11.set_coord(pt_i[2], pt_j[2], pt_i[0], pt_j[0]);
+			enemy.set_coord(pt_i[1], pt_j[1], pt_i[3], pt_j[3]);
 		
 			view[0]->set_processing(1);			//Enable threshold processing and everything
 			view[0]->processing();				//Run process
-			pt11.collision_points(*view[0]);	//Move view[0] object into pt11 function
-			pt11.distance_sensor(*view[0], enemy);
-			pt11.find_target(enemy);
-			pt11.set_coord(pt_i[2], pt_j[2], pt_i[0], pt_j[0]);
 
-			enemy.set_coord(pt_i[1], pt_j[1], pt_i[3], pt_j[3]);
+			pt11.collision_points(*view[0]);	//Move view[0] object into pt11 function
+			pt11.find_target(enemy);
+			pt11.distance_sensor(*view[0], enemy);
+			pt11.NeuroLearn(pw_l, pw_r, laser, trial_number);
+			//pt11.manual_set(pw_l, pw_r, pw_laser, laser);		//Control the bot. A W D for laser, arrows for bot
+
+			if (AI_enemy == 1)		//REF1-3 Enable collision detection, target detection, and 8 sides distance sensor, run AI.
+			{
+				enemy.collision_points(*view[0]);
+				enemy.find_target(pt11);
+				enemy.distance_sensor(*view[0], pt11);
+				enemy.NeuroLearn(pw_l_o, pw_r_o, laser, trial_number);
+			}
+			else
+			{
+				enemy.manual_set(pw_l_o, pw_r_o, pw_laser_o, laser_o);
+			}
+
 			//cout << "theta = " << enemy.get_theta() << endl;;
 
 			////pt11.m_runNet(pw_l, pw_r, laser);
-			
-			pt11.NeuroLearn(pw_l, pw_r, laser, trial_number);
-
-			//pt11.manual_set(pw_l, pw_r, pw_laser, laser);		//Control the bot. A W D for laser, arrows for bot
-			//enemy.manual_set(pw_l_o, pw_r_o, pw_laser_o, laser_o);
 
 			/*
 			view[0]->set_processing(0);			//Set and Prep for original copy
@@ -282,13 +307,15 @@ int main()
 			// don't need to simulate too fast
 			Sleep(10); // 100 fps max
 
-			if (pt11.get_reset_state() == 1)
+			if (pt11.get_reset_state() == 1 || enemy.get_reset_state() == 1)
 			{
-				trial_number += 0.5;
+				trial_number += 1;
+
 				//Sleep(800);
 				break;
 				
 			}
+
 		}
 
 	}

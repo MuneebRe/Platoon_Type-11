@@ -44,9 +44,11 @@ private:
 	double distance_log[8];
 
 	Neural_Net* topology;
+	double trial_timer1, trial_timer2, trial_dt;
 
 public:
 	PT11();
+	void init_neural();
 	void manual_set(int& pw_l, int& pw_r, int& pw_laser, int& laser);
 	void set_coord(double x1, double y1, double x2, double y2);
 	void collision_points(Camera &view);
@@ -66,7 +68,7 @@ public:
 
 	void m_runNet(int& pw_l, int& pw_r, int& laser);
 	//void NeuroNet(int pw_l, int pw_r);
-	void NeuroLearn(int& pw_l, int& pw_r, int& laser, double &trial_number);
+	void NeuroLearn(int& pw_l, int& pw_r, int& laser, int &trial_number);
 
 	~PT11();
 };

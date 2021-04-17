@@ -31,5 +31,6 @@ public:
     void set_trial_number(int trial_number);
     void set_finess_number(int fitness_number);
     void find_best();
+    void load_best();
     char int_to_char(int number);
 };

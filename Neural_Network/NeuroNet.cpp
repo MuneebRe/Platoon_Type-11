@@ -95,8 +95,6 @@ void Neural_Net::print_output()
 
 void Neural_Net::save_weights()
 {
-    
-
 
     ofstream fout;
     
@@ -138,17 +136,35 @@ void Neural_Net::save_weights()
         }
     }
 
+    bias();
 
     fout.close();
 }
 
 void Neural_Net::randomize_weights()
 {
+    //REF1 - 6
+    
+    bool flag0 = 0;     //flag0 is just to see if all the weights are initialized to zero
+    bool flag1 = 0;     //flag1 is if you want randomization to occur relative to the weights stored in best.txt
+    bool flag2 = 1;     //flag2 is if you want to test fully randomly unrelated to best.txt
+
+                        //Currently not doing what it's suppose to well enough? Might need to fix it
+    int rando1 = 50;    //If rando1 = 50, then the weights will add to weight recorded by best.txt with a value between [-0.25, +0.25] Useful for tuning species.
+    int rando2 = 200;   //If rando2 = 50, then the weight will pick a value between [-0.25, +0.25]. Useful to generate different species.
+
+    double limit = 1.0; //Limits the weighting so it's kept between [1.0 - 1.0]. Also, bias( ) is included, if you know what I mean.
+
     for (int i = 0; i < nb_hidden; i++)
     {
         for (int j = 0; j < nb_input; j++)
         {
-            input[j].get_weight(i) = (double)(((rand() % 300)-150)/100.0);
+            if (flag0 == 1) input[j].get_weight(i) = 0;
+            if (flag1 ==1) input[j].get_weight(i) = input[j].get_weight(i) + (double)(((rand() % rando1)-(rando1/2))/100.0);
+            if (flag2 == 1) input[j].get_weight(i) = (double)(((rand() % rando2) - (rando2/2)) / 100.0);
+
+            if (input[j].get_weight(i) > limit) continue;
+            if (input[j].get_weight(i) < -limit) continue;
         }
     }
 
@@ -156,99 +172,162 @@ void Neural_Net::randomize_weights()
     {
         for (int j = 0; j < nb_hidden; j++)
         {
-            hidden[j].get_weight(i) = (double)(((rand() % 300) - 150) / 100.0);
+            if (flag0 == 1) hidden[j].get_weight(i) = 0;
+            if (flag1 == 1) hidden[j].get_weight(i) = hidden[j].get_weight(i) + (double)(((rand() % rando1) - (rando1 / 2)) / 100.0);
+            if (flag2 == 1)hidden[j].get_weight(i) = (double)(((rand() % rando2) - (rando2 / 2)) / 100.0);
+
+            if (hidden[j].get_weight(i) > limit) continue;
+            if (hidden[j].get_weight(i) < -limit) continue;
         }
     }
     bias();
+
 }
 
 void Neural_Net::find_best()
 {
+
     int trial_number_remember = 0;
     int fitness_number_max = 0;
+    int fitness_mem[10];
+    int trial_mem[10];
 
     ifstream fin;
+    ofstream fout;
+
+    fin.open("Fitness_Logs/top_fitness.txt");
+    fin >> fitness_number_max;
+    fin.close();
 
     char string[50] = "Fitness_Logs/trial0.txt";
 
     for (int i = 0; i < 10; i++)
     {
-        for (int i = 0; i < 50; i++)
+        for (int j = 0; j < 50; j++)
         {
-            if (string[i] == '\0')
+            if (string[j] == '\0')
             {
-                string[i - 5] = int_to_char(i);
+                string[j - 5] = int_to_char(i);
                 break;
             }
         }
 
         fin.open(string);
-
-        int temp;
-        //fin >> generation;
         fin >> trial_number;
         fin >> fitness_number;
+        fin.close();
 
-        if (fitness_number > fitness_number_max)
+        cout << "TRIAL " << trial_number << " -> Fitness: " << fitness_number << endl;
+
+        //if (fitness_number >= fitness_number_max) trial_number_remember = trial_number;
+        trial_mem[i] = trial_number;
+        fitness_mem[i] = fitness_number;
+        //cout << "Trial number recrod = " << trial_number_remember << endl;
+    }
+
+    for (int i = 0; i < 10; i++)
+    {
+        //cout << trial_mem[i] << "\t" << fitness_mem[i] << endl;
+        if (fitness_mem[i] > fitness_number_max)
         {
-            fitness_number_max = fitness_number;
-            trial_number_remember = trial_number;
+            fitness_number_max = fitness_mem[i];
+            trial_number_remember = i;
+
+            fout.open("Fitness_Logs/top_fitness.txt");
+            fout << fitness_mem[trial_number_remember] << endl;
+            fout.close();
+
+            for (int i = 0; i < 50; i++)
+            {
+                if (string[i] == '\0')
+                {
+                    string[i - 5] = int_to_char(trial_mem[trial_number_remember]);
+                    break;
+                }
+            }
+
+            //cout << "BEST RECORD AT" << endl;
+            //cout << "TRIAL: " << trial_number_remember << '\t' << "FITNESS: " << fitness_number << endl;
+
+            ifstream inFile(string);
+
+            ofstream outFile("Fitness_Logs/best.txt");
+
+            outFile << inFile.rdbuf();
         }
     }
 
+    cout << "BEST TRIAL " << trial_mem[trial_number_remember] << " -> Fitness: " << fitness_mem[trial_number_remember] << endl;
+
+    
+
+    
+    fin.open("Fitness_Logs/generation.txt");
+    int generation;
+    fin >> generation;
     fin.close();
-
-    for (int i = 0; i < 50; i++)
-    {
-        if (string[i] == '\0')
-        {
-            string[i - 5] = int_to_char(trial_number_remember);
-            break;
-        }
-    }
-
-    ifstream inFile(string);
-
-    ofstream outFile("Fitness_Logs/best.txt");
-    
-    outFile << inFile.rdbuf();
-
-    
-
+    generation++;
     
     
-}
-
-void Neural_Net::randomize_weights_again()
-{
-    for (int i = 0; i < nb_hidden; i++)
-    {
-        for (int j = 0; j < nb_input; j++)
-        {
-            input[j].get_weight(i) = (double)((rand() % 300) - 150) / 100;
-        }
-    }
-    
-    for (int i = 0; i < nb_output; i++)
-    {
-        for (int j = 0; j < nb_hidden; j++)
-        {
-            hidden[j].get_weight(i) = (double)((rand() % 300) - 150) / 100;
-        }
-    }
-    bias();
+    fout.open("Fitness_Logs/generation.txt");
+    fout << generation;
+    fout.close();
 }
 
 void Neural_Net::set_trial_number(int trial_number)
 {
     this->trial_number = trial_number;
-    cout << "Trial: " << trial_number << endl;
+    cout << "Trial: " << trial_number << " saved!" << endl;
 }
 
 void Neural_Net::set_finess_number(int fitness_number)
 {
     this->fitness_number = fitness_number;
     cout << fitness_number << endl;
+}
+
+void Neural_Net::load_best()
+{
+    ifstream fin;
+
+    char string[50] = "Fitness_Logs/trial0.txt";
+
+    for (int i = 0; i < 50; i++)
+    {
+        if (string[i] == '\0')
+        {
+            string[i - 5] = int_to_char(trial_number);;
+            break;
+        }
+    }
+
+    //cout << string << endl;
+    fin.open("Fitness_Logs/best.txt");
+    //fout.open("Neural_Network/Fitness_Logs/trial.txt");
+
+    fin >> trial_number;
+
+    fin >> fitness_number;
+
+
+    for (int i = 0; i < nb_hidden; i++)
+    {
+        for (int j = 0; j < nb_input; j++)
+        {
+            fin >> input[j].get_weight(i);
+        }
+    }
+
+    for (int i = 0; i < nb_output; i++)
+    {
+        for (int j = 0; j < nb_hidden; j++)
+        {
+            fin >> hidden[j].get_weight(i);
+        }
+    }
+
+
+    fin.close();
 }
 
 char Neural_Net::int_to_char(int number)
@@ -284,7 +363,7 @@ char Neural_Net::int_to_char(int number)
         character = '8';
         break;
     case 9:
-        character = '8';
+        character = '9';
         break;
     }
     return character;

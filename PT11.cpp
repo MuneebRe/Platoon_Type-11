@@ -7,6 +7,7 @@ using namespace std;
 #include <cmath>
 #include <iostream>
 #include <fstream>
+#include <iomanip>
 
 #include <Windows.h>
 
@@ -61,10 +62,21 @@ PT11::PT11()
 		distance_log[i] = 0;
 	}
 
-	topology = new Neural_Net(8, 10, 3);
+	trial_timer1 = high_resolution_time();
+
+}
+
+void PT11::init_neural()	//REF1-4 Initialize everytime the simulations starts over
+{
+	topology = new Neural_Net(11, 20, 3);	//Build neural network topology of input, hidden and output nodes. Include Bias for input & hidden
 
 	flag_reset = 0;
 
+	topology->load_best();	//Load the best weight configuration with the highest fitness recorded as of yet
+
+	topology->randomize_weights();	//Perform either relative or fully randomize weightings for each trial
+
+	cout << "Topology for pt11 Initialized!" << endl;
 }
 
 void PT11::manual_set(int& pw_l, int& pw_r, int& pw_laser, int& laser)
@@ -113,10 +125,10 @@ void PT11::collision_points(Camera &view)
 	//Basically, there are dots on all sides of the car to detect collision.
 	//I had to comment out draw_point_rgb because it messes up with check_collision( )
 
-	Lx[0] = 40;		Ly[0] = 0;		LL[0] = 20;		Ln[0] = 5;
-	Lx[1] = -40;	Ly[1] = -45;	LL[1] = 30;		Ln[1] = 6;
-	Lx[2] = -120;	Ly[2] = 0;		LL[2] = 20;		Ln[2] = 5;
-	Lx[3] = -40;	Ly[3] = 50;		LL[3] = 30;		Ln[3] = 6;
+	Lx[0] = 31;		Ly[0] = 0;		LL[0] = 20;		Ln[0] = 4;
+	Lx[1] = -42;	Ly[1] = -34;	LL[1] = 40;		Ln[1] = 4;
+	Lx[2] = -112;	Ly[2] = 0;		LL[2] = 20;		Ln[2] = 4;
+	Lx[3] = Lx[1];	Ly[3] = -Ly[1];	LL[3] = LL[1];	Ln[3] = Ln[1];
 
 	for (int i = 0; i < 4; i++)
 	{
@@ -558,49 +570,88 @@ void PT11::m_runNet(int& pw_l, int& pw_r, int& laser)
 	
 }
 
-void PT11::NeuroLearn(int& pw_l, int& pw_r, int& laser, double &trial_number)
+void PT11::NeuroLearn(int& pw_l, int& pw_r, int& laser, int &trial_number) 
 {
+
+	//REF1-5 Learning process
+	//Everytime the robot aims at the enemy and there is no obstacle, increase fitness value
+	//If trial is running for more than trial_dt, assume collision and reset to new trial run
+	//After each trial, record the trial number, fitness value and store the weights in the trial#.txt under Fitness_Logs
+	//If trial 9 reached, or accidently higher, then find the trial with the best fitness withing those 10 trials,
+	//And store it in Fitness_Logs/best.txt. Each new trial will take the weights from best.txt. Follow to REF1-6
+
 	static int fitness = 0;
 
+	
 	bool init = 0;
 
 	if (init == 0)
 	{
-		topology->randomize_weights();
-
+		
 		init = 1;
 	}
 
-	if (collision_state[0] == 1 || collision_state[1] == 1 || collision_state[2] == 1 || collision_state[3] == 1 || KEY('O'))
+	trial_timer2 = high_resolution_time();
+	double timer_dt = trial_timer2 - trial_timer1;
+	trial_dt = 20.00;
+	
+	if (collision_state[0] == 1 || collision_state[1] == 1 || collision_state[2] == 1 || collision_state[3] == 1 || KEY('O') || timer_dt > trial_dt)
 	{
 		flag_reset = 1;
 		topology->set_trial_number(trial_number);
 		topology->set_finess_number(fitness);
+
+
 		topology->save_weights();
+		
+
+		if (trial_number >= 9)
+		{
+			topology->find_best();
+			trial_number = 0;
+		}
+		
 		fitness = 0;
 		Sleep(800);
 	}
-
-	if (trial_number == 0)
-	{
-		topology->find_best();
-		trial_number = 0;
-	}
+	
 	//topology->find_best();
+
 	//cout << flag_reset << endl;
+	if (target_state == 1) fitness++;
+
+	//int distance_enemy1 = sqrt(pow(enemy.get_x1() - x1, 2) + pow(enemy.get_y1() - y1, 2));
+
+	//fitness = 
+
+	cout << "trial: " << trial_number << " ";
+	cout << "fit: " << fitness << " ";
 	
+	cout << fixed;
+	cout << setprecision(2);
+
+	for (int i = 0; i < 8; i++)
+	{
+		topology->input[i].set_value(distance_log[i] / Ln[i]);
+		//cout << "dis-" << i << ": " << distance_log[i] / Ln[i];
+		//if (i == 7) cout << endl;
+	}
 
 	
+	topology->input[8].set_value(state_dir[0]);
+	topology->input[9].set_value(state_dir[1]);
+	topology->input[10].set_value(target_state);
+
+	cout << "Aim L - " << state_dir[0] << " ";
+	cout << "Aim R - " << state_dir[1] << " ";
+
+	
+	/*
 	topology->input[0].set_value(collision_state[0]);
 	topology->input[1].set_value(collision_state[1]);
 	topology->input[2].set_value(collision_state[2]);
 	topology->input[3].set_value(collision_state[3]);
-	topology->input[4].set_value(state_dir[0]);
-	topology->input[5].set_value(state_dir[1]);
-	topology->input[6].set_value(target_state);
-	
-	if (target_state == 1) fitness++;
-	cout << fitness << endl;
+	*/
 
 
 	topology->calculate_hidden();
@@ -608,6 +659,11 @@ void PT11::NeuroLearn(int& pw_l, int& pw_r, int& laser, double &trial_number)
 	//topology->print_inputs();
 	//topology->print_hidden();
 	//topology->print_output();
+
+	cout << "pw_l output: " << topology->output[0].get_value() << " ";
+	cout << "pw_r output: " << topology->output[1].get_value() << " ";
+	cout << "laser: " << topology->output[2].get_value() << endl;
+
 
 	pw_l = topology->output[0].get_value() * 1000 + 1000;
 	pw_r = topology->output[1].get_value() * 1000 + 1000;
