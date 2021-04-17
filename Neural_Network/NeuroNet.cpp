@@ -143,7 +143,7 @@ void Neural_Net::save_weights()
 
 void Neural_Net::randomize_weights()
 {
-    //REF1 - 6
+    //REF1-6
     
     bool flag0 = 0;     //flag0 is just to see if all the weights are initialized to zero
     bool flag1 = 0;     //flag1 is if you want randomization to occur relative to the weights stored in best.txt

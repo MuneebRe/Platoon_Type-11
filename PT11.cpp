@@ -577,8 +577,9 @@ void PT11::NeuroLearn(int& pw_l, int& pw_r, int& laser, int &trial_number)
 	//Everytime the robot aims at the enemy and there is no obstacle, increase fitness value
 	//If trial is running for more than trial_dt, assume collision and reset to new trial run
 	//After each trial, record the trial number, fitness value and store the weights in the trial#.txt under Fitness_Logs
-	//If trial 9 reached, or accidently higher, then find the trial with the best fitness withing those 10 trials,
-	//And store it in Fitness_Logs/best.txt. Each new trial will take the weights from best.txt. Follow to REF1-6
+	//If trial 9 reached, or accidently higher, then find the trial with the best fitness withing those 10 trials.
+	//Also compare with the fitness of the best.txt one, 
+	//And store it in Fitness_Logs/best.txt. Each new trial will take the weights from best.txt. Depending on how REF1-6 is setup
 
 	static int fitness = 0;
 
