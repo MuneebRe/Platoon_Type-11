@@ -118,7 +118,7 @@ void Neural_Net::save_weights()
     fout << fitness_number << endl;
     
     fout << fixed;
-    fout << setprecision(4);
+    fout << setprecision(2);
     
     for (int i = 0; i < nb_hidden; i++)
     {
@@ -149,22 +149,30 @@ void Neural_Net::randomize_weights()
     bool flag1 = 0;     //flag1 is if you want randomization to occur relative to the weights stored in best.txt
     bool flag2 = 1;     //flag2 is if you want to test fully randomly unrelated to best.txt
 
-                        //Currently not doing what it's suppose to well enough? Might need to fix it
-    int rando1 = 50;    //If rando1 = 50, then the weights will add to weight recorded by best.txt with a value between [-0.25, +0.25] Useful for tuning species.
-    int rando2 = 200;   //If rando2 = 50, then the weight will pick a value between [-0.25, +0.25]. Useful to generate different species.
+    double _rando0 = 0.00;  //Good for resetting all weights, kind of
+    double _rando1 = 0.12;  //if range desired is -0.25 to 0.25, just write 0.25. weights will add to weight recorded by best.txt with a value between [-0.25, +0.25] Useful for tuning species.
+    double _rando2 = 1.00;  //If value 0.25, Weight will pick a value between[-0.25, +0.25].Useful to generate different species.
+    
+    double limit = 1.00;     //Limits the weighting so it's kept between [1.0 - 1.0]. Also, bias( ) is included, if you know what I mean.
 
-    double limit = 1.0; //Limits the weighting so it's kept between [1.0 - 1.0]. Also, bias( ) is included, if you know what I mean.
+    int rando1 = _rando1 * 100 * 2;     //Double to int convert
+    int rando2 = _rando2 * 100 * 2;     //Double to int convert 
 
     for (int i = 0; i < nb_hidden; i++)
     {
         for (int j = 0; j < nb_input; j++)
         {
-            if (flag0 == 1) input[j].get_weight(i) = 0;
-            if (flag1 ==1) input[j].get_weight(i) = input[j].get_weight(i) + (double)(((rand() % rando1)-(rando1/2))/100.0);
-            if (flag2 == 1) input[j].get_weight(i) = (double)(((rand() % rando2) - (rando2/2)) / 100.0);
+            while (1)
+            {
+                if (flag0 == 1) input[j].get_weight(i) = _rando0;
+                if (flag1 == 1) input[j].get_weight(i) = input[j].get_weight(i) + (double)(((rand() % rando1) - (rando1 / 2)) / 100.0);
+                if (flag2 == 1) input[j].get_weight(i) = (double)(((rand() % rando2) - (rando2 / 2)) / 100.0);
+                
+                if (input[j].get_weight(i) < -limit) input[j].get_weight(i) = -limit;
+                if (input[j].get_weight(i) > limit) input[j].get_weight(i) = limit;
 
-            if (input[j].get_weight(i) > limit) continue;
-            if (input[j].get_weight(i) < -limit) continue;
+                if (input[j].get_weight(i) < limit && input[j].get_weight(i) > -limit) break;
+            }
         }
     }
 
@@ -172,12 +180,17 @@ void Neural_Net::randomize_weights()
     {
         for (int j = 0; j < nb_hidden; j++)
         {
-            if (flag0 == 1) hidden[j].get_weight(i) = 0;
-            if (flag1 == 1) hidden[j].get_weight(i) = hidden[j].get_weight(i) + (double)(((rand() % rando1) - (rando1 / 2)) / 100.0);
-            if (flag2 == 1)hidden[j].get_weight(i) = (double)(((rand() % rando2) - (rando2 / 2)) / 100.0);
-
-            if (hidden[j].get_weight(i) > limit) continue;
-            if (hidden[j].get_weight(i) < -limit) continue;
+            while ( 1 )
+            {
+                if (flag0 == 1) hidden[j].get_weight(i) = _rando0;
+                if (flag1 == 1) hidden[j].get_weight(i) = hidden[j].get_weight(i) + (double)(((rand() % rando1) - (rando1 / 2)) / 100.0);
+                if (flag2 == 1) hidden[j].get_weight(i) = (double)(((rand() % rando2) - (rando2 / 2)) / 100.0);
+                
+                if (hidden[j].get_weight(i) < -limit) hidden[j].get_weight(i) = -limit;
+                if (hidden[j].get_weight(i) > limit) hidden[j].get_weight(i) = limit;
+               
+                if (hidden[j].get_weight(i) < limit && hidden[j].get_weight(i) > -limit) break;
+            } 
         }
     }
     bias();
@@ -197,6 +210,7 @@ void Neural_Net::find_best()
 
     fin.open("Fitness_Logs/top_fitness.txt");
     fin >> fitness_number_max;
+    //fitness_number_max = 0; //Helpful if specie not improving, doubt you'd need it
     fin.close();
 
     char string[50] = "Fitness_Logs/trial0.txt";

@@ -52,12 +52,12 @@ int main()
 	// number of obstacles
 	N_obs  = 2;
 
-	x_obs[1] = 270; // pixels
-	y_obs[1] = 270; // pixels
+	x_obs[1] = 300; // pixels
+	y_obs[1] = 260; // pixels
 	size_obs[1] = 1.0; // scale factor 1.0 = 100% (not implemented yet)	
 
-	x_obs[2] = 330;// 135; // pixels
-	y_obs[2] = 330;// 135; // pixels
+	x_obs[2] = 250;// 135; // pixels
+	y_obs[2] = 200;// 135; // pixels
 	size_obs[2] = 1.0; // scale factor 1.0 = 100% (not implemented yet)	
 
 	// set robot model parameters ////////
@@ -115,14 +115,14 @@ int main()
 	static int trial_number = 0;
 	cout << "Trial Number " << trial_number << " begin!" << endl;
 	// set robot initial position (pixels) and angle (rad)
-	x0 = 470;
-	y0 = 170;
+	x0 = 460;
+	y0 = 225;
 	theta0 = 0;
 	set_robot_position(x0,y0,theta0);
 	
 	// set opponent initial position (pixels) and angle (rad)
-	x0 = 150;
-	y0 = 375;
+	x0 = 200;
+	y0 = 300;
 	theta0 = 3.14159/4;
 	set_opponent_position(x0,y0,theta0);
 
@@ -136,8 +136,8 @@ int main()
 	laser = 0; // laser input (0 - off, 1 - fire)
 	
 	// paramaters
-	max_speed = 100; // max wheel speed of robot (pixels/s)
-	opponent_max_speed = 100; // max wheel speed of opponent (pixels/s)
+	max_speed = 100; // 100; // max wheel speed of robot (pixels/s)
+	opponent_max_speed = 100; // 100; // max wheel speed of opponent (pixels/s)
 	
 	// lighting parameters (not currently implemented in the library)
 	light = 1.0;
@@ -177,28 +177,21 @@ int main()
 	//Serial port(false, "COM12", 1);		//Establish bluetooth communication with robot (real)
 
 	//Enable Neural Network for enemy?
-	static bool AI_enemy = 1;	//REF1-1 enemy will follow weight pattern as pt11
+	static bool AI_player = 0;	//for player
+	static bool AI_enemy = 0;	//REF1-1 enemy will follow weight pattern as pt11
+	
 
 	PT11 pt11;		//Make instance of robot (sim)
 	PT11 enemy;		//Make instance of enemy
 
-	pt11.init_neural();		//REF1-2 Load latest weight data, then randomize it (either relative to best one or fully random)
+	if (AI_player == 1) pt11.init_neural();		//REF1-2 Load latest weight data, then randomize it (either relative to best one or fully random)
 	if(AI_enemy == 1) enemy.init_neural();
 
-	static int init1 = 0;
-	if (init1 == 0)
-	{
-		//pt11.load_best();
-		//cout << "THISTHINIGNSIHISHAODASIOD" << endl;
-		init1 = 1;
-	}
-	//runNet();
-
-	
+	//runNet();	//Neural Network copied off online and edited for my use,
+				//But it requires specific training data so it's no good, deals with conflict in order.
 
 	// measure initial clock time
 	tc0 = high_resolution_time(); 
-
 	
 	//view[0]->find_object();    //Testing for "tracking" lecture, pick a white spot. Press 'c' to select.
 
@@ -246,40 +239,64 @@ int main()
 				pt_j[i-6] = view[0]->get_jc();	//For each color
 			}
 
-			/*
-			for (int i = 0; i < 4; i++)
-			{
-				draw_point_rgb(view[0]->return_image(), pt_i[i], pt_j[i], 0, 0, 255); //Call back array and draw point at those locations
-			}
-			*/
+			
+			
+			
 
 			pt11.set_coord(pt_i[2], pt_j[2], pt_i[0], pt_j[0]);
 			enemy.set_coord(pt_i[1], pt_j[1], pt_i[3], pt_j[3]);
 		
 			view[0]->set_processing(1);			//Enable threshold processing and everything
 			view[0]->processing();				//Run process
+		
+			view[0]->set_processing(11);		//Enable labeling processing and everything
+			view[0]->processing();				//Run process
+
+			pt11.fill_wheel_void(*view[0]);
+			pt11.label_nb_1 = (int)view[0]->label_at_coordinate(pt_i[2] + 15, pt_j[2] + 15);
+			pt11.label_nb_2 = (int)view[0]->label_at_coordinate(pt_i[0] + 15, pt_j[0] + 15);
+
+			enemy.fill_wheel_void(*view[0]);
+			enemy.label_nb_1 = (int)view[0]->label_at_coordinate(pt_i[1] + 15, pt_j[1] + 15);
+			enemy.label_nb_2 = (int)view[0]->label_at_coordinate(pt_i[3] + 15, pt_j[3] + 15);
+
+			//pt11.label_enemy(view[0], enemy);
 
 			pt11.collision_points(*view[0]);	//Move view[0] object into pt11 function
-			pt11.find_target(enemy);
+			//pt11.find_target(enemy);
 			pt11.distance_sensor(*view[0], enemy);
-			pt11.NeuroLearn(pw_l, pw_r, laser, trial_number);
-			//pt11.manual_set(pw_l, pw_r, pw_laser, laser);		//Control the bot. A W D for laser, arrows for bot
+			pt11.find_target(enemy);
 
+			if (AI_player == 1)
+			{
+				pt11.NeuroLearn(pw_l, pw_r, laser, trial_number);
+			}
+			else if (AI_player == 0)
+			{
+				pt11.manual_set(pw_l, pw_r, pw_laser, laser);		//Control the bot. A W D for laser, arrows for bot
+				//pt11.scout(pw_l, pw_r, pw_laser, laser);
+			}
+
+			//enemy.collision_points(*view[0]);
+			//enemy.find_target(pt11);
+			//enemy.distance_sensor(*view[0], pt11);
+			
 			if (AI_enemy == 1)		//REF1-3 Enable collision detection, target detection, and 8 sides distance sensor, run AI.
 			{
-				enemy.collision_points(*view[0]);
-				enemy.find_target(pt11);
-				enemy.distance_sensor(*view[0], pt11);
 				enemy.NeuroLearn(pw_l_o, pw_r_o, laser, trial_number);
 			}
 			else
 			{
-				enemy.manual_set(pw_l_o, pw_r_o, pw_laser_o, laser_o);
+				//enemy.manual_set(pw_l_o, pw_r_o, pw_laser_o, laser_o);
 			}
 
-			//cout << "theta = " << enemy.get_theta() << endl;;
 
-			////pt11.m_runNet(pw_l, pw_r, laser);
+			for (int i = 0; i < 4; i++)
+			{
+				draw_point_rgb(view[0]->return_image(), pt_i[i], pt_j[i], 0, 255, 255); //Call back array and draw point at those locations
+			}
+
+			////pt11.m_runNet(pw_l, pw_r, laser);		//Also not used, results inconsistent
 
 			/*
 			view[0]->set_processing(0);			//Set and Prep for original copy
@@ -288,10 +305,10 @@ int main()
 			view[0]->set_processing(10);		//Prep for sobel imagery
 			view[0]->processing();				//Do sobel imagery
 			*/
-			draw_point_rgb(view[0]->return_image(), pt_i[1], pt_j[1], 0, 0, 255);
-			draw_point_rgb(view[0]->return_image(), pt_i[3], pt_j[3], 0, 0, 255);
+			//draw_point_rgb(view[0]->return_image(), pt_i[1], pt_j[1], 0, 0, 255);
+			//draw_point_rgb(view[0]->return_image(), pt_i[3], pt_j[3], 0, 0, 255);
 
-			view[index]->view();	//View the the processed image
+			view[index]->view();	//View the the processed image MUNEEB REF 
 			//view[0]->view();
 
 

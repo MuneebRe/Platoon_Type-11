@@ -20,6 +20,9 @@ public:
 	bool net_mem[7];
 	double net_out[3];
 
+	int label_nb_1;
+	int label_nb_2;
+
 
 private:
 	double x1,x2, dx, ddx;
@@ -32,6 +35,7 @@ private:
 	bool state_laser;
 	bool state_dir[2];	//Trigger to determine which side enemy located
 	bool flag_reset;
+	bool is_there_obstacle;
 
 	int Lx[8];
 	int Ly[8];
@@ -64,11 +68,15 @@ public:
 
 	void distance_sensor(Camera& view, PT11 enemy);
 	void distance_input(int arrx[], int arry[], Camera& view, int i);
-	void is_obstacle_before_enemy(int arrx[], int arry[], PT11 enemy);
+	void is_obstacle_before_enemy(int arrx[], int arry[], PT11 enemy, Camera& view);
+	void label_enemy(Camera& view, PT11 enemy);
+	void fill_wheel_void(Camera& view);
 
 	void m_runNet(int& pw_l, int& pw_r, int& laser);
 	//void NeuroNet(int pw_l, int pw_r);
 	void NeuroLearn(int& pw_l, int& pw_r, int& laser, int &trial_number);
+
+	void scout(int& pw_l, int& pw_r, int& pw_laser, int& laser);
 
 	~PT11();
 };

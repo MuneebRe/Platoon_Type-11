@@ -13,6 +13,7 @@ using namespace std;
 
 #include <conio.h>
 #include <windows.h>
+#include <string>
 #include "serial_com.h"
 #include "image_transfer.h"
 
@@ -64,11 +65,16 @@ PT11::PT11()
 
 	trial_timer1 = high_resolution_time();
 
+	is_there_obstacle = 0;
+
+	label_nb_1 = 0;
+	label_nb_2 = 0;
+
 }
 
 void PT11::init_neural()	//REF1-4 Initialize everytime the simulations starts over
 {
-	topology = new Neural_Net(11, 20, 3);	//Build neural network topology of input, hidden and output nodes. Include Bias for input & hidden
+	topology = new Neural_Net(11, 4, 3);	//Build neural network topology of input, hidden and output nodes. Include Bias for input & hidden
 
 	flag_reset = 0;
 
@@ -181,6 +187,38 @@ void PT11::collision_points(Camera &view)
 
 }
 
+void PT11::fill_wheel_void(Camera& view)
+{
+	int x_draw;
+	int y_draw;
+
+	int Lx = 0;
+	int Ly;
+
+	
+	Ly = -29;
+	x_draw = x1 + Lx * cos(theta) - Ly * sin(theta);
+	y_draw = y1 + Lx * sin(theta) + Ly * cos(theta);
+	draw_point_rgb(view.return_image(), x_draw, y_draw, 255, 255, 255);
+
+	Ly = -30;
+	x_draw = x1 + Lx * cos(theta) - Ly * sin(theta);
+	y_draw = y1 + Lx * sin(theta) + Ly * cos(theta);
+	draw_point_rgb(view.return_image(), x_draw, y_draw, 255, 255, 255);
+	
+	Ly = 29;
+	x_draw = x1 + Lx * cos(theta) - Ly * sin(theta);
+	y_draw = y1 + Lx * sin(theta) + Ly * cos(theta);
+	draw_point_rgb(view.return_image(), x_draw, y_draw, 255, 255, 255);
+	
+	Ly = 30;
+	x_draw = x1 + Lx * cos(theta) - Ly * sin(theta);
+	y_draw = y1 + Lx * sin(theta) + Ly * cos(theta);
+	draw_point_rgb(view.return_image(), x_draw, y_draw, 255, 255, 255);
+
+}
+
+
 void PT11::distance_sensor(Camera& view, PT11 enemy)
 {	
 	Lx[0] = 30;		Ly[0] = 0;		LL[0] = 10;		Ln[0] = 80;			//Front
@@ -219,8 +257,9 @@ void PT11::distance_sensor(Camera& view, PT11 enemy)
 				arrx[j] += (Ax[i] + LL[i] * j) * cos(theta) - (Ay[i] + LL[i] * j* AF[i]) * sin(theta);
 				arry[j] += (Ax[i] + LL[i] * j) * sin(theta) + (Ay[i] + LL[i] * j* AF[i]) * cos(theta);
 				if (flag == 1) draw_point_rgb(view.return_image(), arrx[j], arry[j], 255, 255, 255);
+				
 			}
-			is_obstacle_before_enemy(arrx, arry, enemy);
+			is_obstacle_before_enemy(arrx, arry, enemy, view);
 			break;
 		case 1:
 			for (int j = 0; j < Ln[i]; j++)
@@ -363,9 +402,61 @@ void PT11::distance_input(int arrx[], int arry[], Camera& view, int i)
 
 }
 
-void PT11::is_obstacle_before_enemy(int arrx[], int arry[], PT11 enemy)
+void PT11::is_obstacle_before_enemy(int arrx[], int arry[], PT11 enemy, Camera& view)
 {
+	//cout << "label 1 is at " << enemy.label_nb_1 << endl;
+	//cout << "label 2 is at " << enemy.label_nb_2 << endl;
 
+
+	int what_label = 0;
+
+	//copy(view.return_image(), view.return_a());
+
+	ibyte* pa;
+
+	pa = view.return_a().pdata;
+
+	int* k = new int[Ln[0]];	//Can vary length of point series for collision accuracy
+
+	int distance_log_enemy = 0;
+
+	for (int i2 = 0; i2 < Ln[0]; i2++)	//For each dot on the line of points, find position based on 1D image reference
+	{
+
+		if (arrx[i2] > 0 && arrx[i2] < view.return_a().width && arry[i2] > 0 && arry[i2] < view.return_a().height)
+		{
+			what_label = view.label_at_coordinate(arrx[i2], arry[i2]);
+		}
+		else
+		{
+			distance_log_enemy = 1000;
+			break;
+		}
+
+		//draw_point_rgb(view.return_image(), arrx[i2], arry[i2], 255, 255, 255);
+		
+		if (what_label == enemy.label_nb_1 || what_label == enemy.label_nb_2)
+		{
+			distance_log_enemy = i2;
+			break;
+		}
+	}
+
+	//cout << distance_log[0] << "\t" << distance_log_enemy << endl;
+
+	if (distance_log[0] > distance_log_enemy-1)
+	{
+
+		target_state = 1;
+		//cout << "ATTACK!!!!!!" << endl;
+	}
+	else
+	{
+		target_state = 0;
+	}
+
+	delete[]k;
+	/*
 	//int distance_enemy1 = sqrt(pow(enemy.get_x1() - x1, 2) + pow(enemy.get_y1() - y1, 2));
 	//int distance_enemy2 = sqrt(pow(enemy.get_x2() - x1, 2) + pow(enemy.get_y2() - y1, 2));
 	int enemy_no_obs1;
@@ -373,7 +464,7 @@ void PT11::is_obstacle_before_enemy(int arrx[], int arry[], PT11 enemy)
 
 	//cout << distance_enemy1 << "  |  " << distance_enemy2 << "  |  " << distance_log[0]*LL[0]<< endl;
 
-	int box_length = 30;
+	int box_length = 100;
 
 	for (int i = 0; i < Ln[0]; i++)
 	{
@@ -400,13 +491,17 @@ void PT11::is_obstacle_before_enemy(int arrx[], int arry[], PT11 enemy)
 			enemy_no_obs2 = 0;
 		}
 	}
-
+	
 	if (target_state == 1 &&
 		(distance_log[0] * LL[0] < enemy_no_obs1 || distance_log[0] * LL[0] < enemy_no_obs2))
 	{
-		target_state = 0;
+		is_there_obstacle = 1;
 	}
-
+	else
+	{
+		is_there_obstacle = 0;
+	}
+	//cout << is_there_obstacle << endl;
 	//cout << target_state << endl;
 	/*
 	cout << distance_log[0] << " ! " << enemy_no_obs1 << endl;
@@ -414,6 +509,7 @@ void PT11::is_obstacle_before_enemy(int arrx[], int arry[], PT11 enemy)
 	if (distance_log[0] * LL[0] < enemy_no_obs2) cout << "Obstacle behind enemy front target" << endl;
 	cout << distance_log[0] << " ! " << enemy_no_obs2 << endl;
 	*/
+	
 }
 
 void PT11::check_collision(int arrx[], int arry[], Camera &view, int i)
@@ -511,21 +607,22 @@ void PT11::find_target(PT11 enemy)
 {
 	calculate_theta(enemy.get_x1(), enemy.get_y1(), x1, y1, theta_target1);
 	calculate_theta(enemy.get_x2(), enemy.get_y2(), x1, y1, theta_target2);
-	//cout << theta_target << endl;
+	//cout << theta_target1 << endl;
 
 	target_delta1 = theta_target1 - theta;
 	target_delta2 = theta_target2 - theta;
 	//cout << target_delta1 << "\t" << target_delta2 << endl;
 
-	trigger_range = 0.05;
+	//trigger_range = 0.05;
 	
+	/*
 	if (abs(target_delta1) < trigger_range || abs(target_delta2) < trigger_range){
 		target_state = 1;
 	}
 	else {
 		target_state = 0;
 	}
-
+	*/
 	if (target_delta1 >= 0) { state_dir[0] = 1; }
 	else if (target_delta1 < 0) {state_dir[1] = 1; }
 
@@ -627,14 +724,15 @@ void PT11::NeuroLearn(int& pw_l, int& pw_r, int& laser, int &trial_number)
 
 	cout << "trial: " << trial_number << " ";
 	cout << "fit: " << fitness << " ";
-	
+	cout << endl;
+
 	cout << fixed;
 	cout << setprecision(2);
 
 	for (int i = 0; i < 8; i++)
 	{
 		topology->input[i].set_value(distance_log[i] / Ln[i]);
-		//cout << "dis-" << i << ": " << distance_log[i] / Ln[i];
+		//cout << "  dis-" << i << ": " << distance_log[i] / Ln[i];
 		//if (i == 7) cout << endl;
 	}
 
@@ -642,10 +740,11 @@ void PT11::NeuroLearn(int& pw_l, int& pw_r, int& laser, int &trial_number)
 	topology->input[8].set_value(state_dir[0]);
 	topology->input[9].set_value(state_dir[1]);
 	topology->input[10].set_value(target_state);
-
+	//topology->input[8].set_value(target_state);
+	
 	cout << "Aim L - " << state_dir[0] << " ";
 	cout << "Aim R - " << state_dir[1] << " ";
-
+	
 	
 	/*
 	topology->input[0].set_value(collision_state[0]);
@@ -661,14 +760,80 @@ void PT11::NeuroLearn(int& pw_l, int& pw_r, int& laser, int &trial_number)
 	//topology->print_hidden();
 	//topology->print_output();
 
+	/*
 	cout << "pw_l output: " << topology->output[0].get_value() << " ";
 	cout << "pw_r output: " << topology->output[1].get_value() << " ";
 	cout << "laser: " << topology->output[2].get_value() << endl;
-
+	*/
 
 	pw_l = topology->output[0].get_value() * 1000 + 1000;
 	pw_r = topology->output[1].get_value() * 1000 + 1000;
 	laser = topology->output[2].get_value();
+	
+}
+
+void PT11::scout(int& pw_l, int& pw_r, int& pw_laser, int& laser)
+{
+	//Task for Afroza:
+	//Control the robot so it avoids obstacles and attacks the enemy
+	//Using only those variables:
+
+	//Distance sensor:
+	//distance_log[0]	Front distance sensor
+	//distance_log[1]	Front Right distance sensor
+	//distance_log[2]	Right side distance sensor
+	//distance_log[3]	Back right distance sensor
+	//distance_log[4]	Back distance sensor
+	//distance_log[5]	Back left distance sensor
+	//distance_log[6]	Left distance sensor
+	//distance_log[7]	Forward left distance sensor
+	//Note: The values stored in those is under Ln[...], check void PT11::distance_sensor.
+	//Basically, if Ln[0] were 100, my robot is draw 100 points on a straight line
+	//If the white pixel of an obstacle was found in point 60, then ditance_log[0] would return 60.
+	
+	//Collision sensor:
+	//collision_state[0]	Front collision
+	//collision_state[1]	Right collision
+	//collision_state[2]	Back collision
+	//collision_state[3]	Left collision
+	//Value is either 0 or 1.
+
+	//target_state		Will return 1 if the front distance sensor is directly looking at the enemy
+	//					Will return 0 if enemy hiding behind obstacle, or just looking at obstacle
+	//state_dir[0]		Will return 1 if the enemy is counter clockwise from your theta
+	//state_dir[1]		Will return 0 if enemy is clockwise from your theta
+
+	//In order to know if those values make sense, use cout << [thing of interest] << "  " << [other thing] << ...  << endl;
+	//To use this whole function, make sure that AI_player = 0 in program.cpp, and that pt11.scout(pw_l, pw_r, pw_laser, laser);
+	//is commented out, while commenting pt11.manual_set(pw_l, pw_r, pw_laser, laser);
+
+	int action = 0;
+	cout << is_there_obstacle << endl;
+
+	if (state_dir[0] == 1) action = 0;		
+	if (state_dir[1] == 1) action = 1;
+	if (target_state == 1) action = 2;
+
+	switch (action)
+	{
+	case 0:
+		pw_l = 2000;
+		pw_r = 2000;
+		break;
+	case 1:
+		pw_l = 1000;
+		pw_r = 1000;
+		break;
+	case 2:
+		pw_l = 1000;
+		pw_r = 2000;
+		break;
+	}
+	
+}
+
+void PT11::label_enemy(Camera& view, PT11 enemy)
+{
 	
 }
 

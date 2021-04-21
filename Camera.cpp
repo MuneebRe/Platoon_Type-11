@@ -157,6 +157,9 @@ void Camera::processing()
 		sobel(a, mag, theta);
 		copy(theta, rgb);
 		break;
+	case 11:
+		label_image(a, label, nlabels);
+		break;
 	}
 	
 }
@@ -290,6 +293,31 @@ int Camera::select_object()		//Code from lecture, combined tracking with RGB to 
 		return 0; // no errors
 	
 }
+
+i2byte Camera::label_at_coordinate(int is, int js)
+{
+	i2byte* pl;
+
+	ibyte* p, * pc;
+
+	p = rgb.pdata;
+
+	//label_image(a, label, nlabels);
+
+	//draw_point_rgb(rgb, is, js, 0, 255, 0);
+
+	if (is < 0) is = 0;
+	if (is > b.width - 1) is = b.width - 1;
+	if (js < 0) js = 0;
+	if (js > b.height - 1) js = b.height - 1;
+
+	pl = (i2byte*)label.pdata;
+
+	nlabel = *(pl + js * label.width + is);
+
+	return nlabel;
+}
+
 
 int Camera::search_object(int is, int js)		//Code from lecture
 // search for a labeled object in an outward spiral pattern

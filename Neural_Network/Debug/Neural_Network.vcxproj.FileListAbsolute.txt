@@ -1,0 +1,2 @@
+C:\Users\Muneeb\Documents\GitHub\Platoon_Type-11\Neural_Network\Debug\Neural_Network.exe
+C:\Users\Muneeb\Documents\GitHub\Platoon_Type-11\Neural_Network\Debug\Neural_Network.pdb

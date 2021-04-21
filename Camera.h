@@ -5,6 +5,7 @@ class Camera
 private:
 	image rgb, a, b, original, label, mag, theta;
 	i2byte nlabel;
+	int nlabels;
 	int cam_number, width, height, type;
 	bool state, is_simulator;
 	int processing_type;
@@ -22,6 +23,7 @@ public:
 	void processing();
 	image& return_image() { return rgb; }
 	image& return_a() { return a; }
+	image& return_label() { return label; }
 	int get_count() { return count; }
 	void set_processing(int processing_type) { this->processing_type = processing_type; }
 	void acquire();
@@ -37,6 +39,7 @@ public:
 	int find_object();
 	int track_object();
 	int search_object(int is, int js);
+	i2byte label_at_coordinate(int is, int js);
 
 	void red_filter();
 	void hue_filter(double min_hue, double max_hue, double min_sat, double max_sat, double min_val, double max_val);
