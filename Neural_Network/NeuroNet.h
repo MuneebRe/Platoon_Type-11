@@ -13,6 +13,9 @@ private:
     int trial_number;
     int fitness_number;
     int generation;
+    bool always_reset_fitness;
+    int trial_number_limit;
+
 public:
     Input* input;
     Hidden* hidden;
@@ -27,10 +30,14 @@ public:
     void bias();
     void save_weights();
     void randomize_weights();
+    void randomize_just_one_weight();
     void randomize_weights_again();
     void set_trial_number(int trial_number);
     void set_finess_number(int fitness_number);
     void find_best();
     void load_best();
     char int_to_char(int number);
+    void zero_to_hundred(int number, char& index1, char& index2);
+    void set_trial_nb_limit(int trial_number_limit) { this->trial_number_limit = trial_number_limit; }
+    int get_trial_nb_limit() { return trial_number_limit; }
 };

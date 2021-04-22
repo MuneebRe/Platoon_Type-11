@@ -48,17 +48,27 @@ int main()
 	width1  = 640;
 	height1 = 480;
 	
-
+	/*
 	// number of obstacles
 	N_obs  = 2;
 
 	x_obs[1] = 300; // pixels
-	y_obs[1] = 260; // pixels
+	y_obs[1] = 0; // pixels
 	size_obs[1] = 1.0; // scale factor 1.0 = 100% (not implemented yet)	
 
-	x_obs[2] = 250;// 135; // pixels
-	y_obs[2] = 200;// 135; // pixels
+	x_obs[2] = 300;// 135; // pixels
+	y_obs[2] = 70;// 135; // pixels
 	size_obs[2] = 1.0; // scale factor 1.0 = 100% (not implemented yet)	
+	*/
+
+	N_obs = 5;
+	for (int i = 1; i <= N_obs; i++)
+	{
+		x_obs[i] = 300;
+		y_obs[i] = 170 * i - 70;
+		y_obs[i] = 0;
+		size_obs[i] = 1.0;
+	}
 
 	// set robot model parameters ////////
 	
@@ -115,14 +125,15 @@ int main()
 	static int trial_number = 0;
 	cout << "Trial Number " << trial_number << " begin!" << endl;
 	// set robot initial position (pixels) and angle (rad)
-	x0 = 460;
+	x0 = 550;
 	y0 = 225;
 	theta0 = 0;
+	//theta0 = rand() % 5;
 	set_robot_position(x0,y0,theta0);
 	
 	// set opponent initial position (pixels) and angle (rad)
-	x0 = 200;
-	y0 = 300;
+	x0 = 160;
+	y0 = 170;
 	theta0 = 3.14159/4;
 	set_opponent_position(x0,y0,theta0);
 
@@ -136,7 +147,7 @@ int main()
 	laser = 0; // laser input (0 - off, 1 - fire)
 	
 	// paramaters
-	max_speed = 100; // 100; // max wheel speed of robot (pixels/s)
+	max_speed = 700; // 100; // max wheel speed of robot (pixels/s)
 	opponent_max_speed = 100; // 100; // max wheel speed of opponent (pixels/s)
 	
 	// lighting parameters (not currently implemented in the library)
@@ -177,9 +188,8 @@ int main()
 	//Serial port(false, "COM12", 1);		//Establish bluetooth communication with robot (real)
 
 	//Enable Neural Network for enemy?
-	static bool AI_player = 0;	//for player
+	static bool AI_player = 1;	//for player
 	static bool AI_enemy = 0;	//REF1-1 enemy will follow weight pattern as pt11
-	
 
 	PT11 pt11;		//Make instance of robot (sim)
 	PT11 enemy;		//Make instance of enemy

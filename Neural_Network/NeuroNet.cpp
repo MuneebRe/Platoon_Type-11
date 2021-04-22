@@ -98,13 +98,16 @@ void Neural_Net::save_weights()
 
     ofstream fout;
     
-    char string[50] = "Fitness_Logs/trial0.txt";
+    char string[50] = "Fitness_Logs/trial00.txt";
 
     for (int i = 0; i < 50; i++)
     {
         if (string[i] == '\0')
         {   
-            string[i - 5] = int_to_char(trial_number);;
+            //string[i - 5] = int_to_char(trial_number);
+
+            zero_to_hundred(trial_number, string[i - 5], string[i - 6]);
+
             break;
         }
     }
@@ -144,13 +147,14 @@ void Neural_Net::save_weights()
 void Neural_Net::randomize_weights()
 {
     //REF1-6
+    always_reset_fitness = 0;
     
     bool flag0 = 0;     //flag0 is just to see if all the weights are initialized to zero
-    bool flag1 = 0;     //flag1 is if you want randomization to occur relative to the weights stored in best.txt
-    bool flag2 = 1;     //flag2 is if you want to test fully randomly unrelated to best.txt
+    bool flag1 = 1;     //flag1 is if you want randomization to occur relative to the weights stored in best.txt
+    bool flag2 = 0;     //flag2 is if you want to test fully randomly unrelated to best.txt
 
     double _rando0 = 0.00;  //Good for resetting all weights, kind of
-    double _rando1 = 0.12;  //if range desired is -0.25 to 0.25, just write 0.25. weights will add to weight recorded by best.txt with a value between [-0.25, +0.25] Useful for tuning species.
+    double _rando1 = 0.50;  //if range desired is -0.25 to 0.25, just write 0.25. weights will add to weight recorded by best.txt with a value between [-0.25, +0.25] Useful for tuning species.
     double _rando2 = 1.00;  //If value 0.25, Weight will pick a value between[-0.25, +0.25].Useful to generate different species.
     
     double limit = 1.00;     //Limits the weighting so it's kept between [1.0 - 1.0]. Also, bias( ) is included, if you know what I mean.
@@ -197,31 +201,113 @@ void Neural_Net::randomize_weights()
 
 }
 
+void Neural_Net::randomize_just_one_weight()
+{
+    //REF1-6
+    always_reset_fitness = 0;
+
+    bool flag0 = 0;     //flag0 is just to see if all the weights are initialized to zero
+    bool flag1 = 0;     //flag1 is if you want randomization to occur relative to the weights stored in best.txt
+    bool flag2 = 1;     //flag2 is if you want to test fully randomly unrelated to best.txt
+
+    double _rando0 = 0.00;  //Good for resetting all weights, kind of
+    double _rando1 = 0.10;  //if range desired is -0.25 to 0.25, just write 0.25. weights will add to weight recorded by best.txt with a value between [-0.25, +0.25] Useful for tuning species.
+    double _rando2 = 1.00;  //If value 0.25, Weight will pick a value between[-0.25, +0.25].Useful to generate different species.
+
+    double limit = 1.00;     //Limits the weighting so it's kept between [1.0 - 1.0]. Also, bias( ) is included, if you know what I mean.
+
+    int rando1 = _rando1 * 100 * 2;     //Double to int convert
+    int rando2 = _rando2 * 100 * 2;     //Double to int convert
+
+    int layer_selection = rand() % 2;
+
+    if (layer_selection == 0)
+    {
+        int select_input;
+        int select_weight;
+
+
+            select_input = rand() & (nb_input - 1);
+            select_weight = rand() & (nb_hidden-1);
+
+
+        cout << "Selected input:  " << select_input << "  " << "Selected weight :" << select_weight << endl;
+
+        while (1)
+        {
+            if (flag0 == 1) input[select_input].get_weight(select_weight) = _rando0;
+            if (flag1 == 1) input[select_input].get_weight(select_weight) = input[select_input].get_weight(select_weight) + (double)(((rand() % rando1) - (rando1 / 2)) / 100.0);
+            if (flag2 == 1) input[select_input].get_weight(select_weight) = (double)(((rand() % rando2) - (rando2 / 2)) / 100.0);
+
+            if (input[select_input].get_weight(select_weight) < -limit) input[select_input].get_weight(select_weight) = -limit;
+            if (input[select_input].get_weight(select_weight) > limit) input[select_input].get_weight(select_weight) = limit;
+
+            if (input[select_input].get_weight(select_weight) < limit && input[select_input].get_weight(select_weight) > -limit) break;
+        }
+    }
+    
+    if (layer_selection == 1)
+    {
+        int select_hidden;
+        int select_weight;
+
+
+            select_hidden = rand() & (nb_hidden - 1);
+            select_weight = rand() & (nb_output - 1);
+
+
+        cout << "Selected hidden: " << select_hidden << "  " << "Selected weight: " << select_weight << endl;
+
+        while (1)
+        {
+            if (flag0 == 1) hidden[select_hidden].get_weight(select_weight) = _rando0;
+            if (flag1 == 1) hidden[select_hidden].get_weight(select_weight) = hidden[select_hidden].get_weight(select_weight) + (double)(((rand() % rando1) - (rando1 / 2)) / 100.0);
+            if (flag2 == 1) hidden[select_hidden].get_weight(select_weight) = (double)(((rand() % rando2) - (rando2 / 2)) / 100.0);
+
+            if (hidden[select_hidden].get_weight(select_weight) < -limit) hidden[select_hidden].get_weight(select_weight) = -limit;
+            if (hidden[select_hidden].get_weight(select_weight) > limit) hidden[select_hidden].get_weight(select_weight) = limit;
+
+            if (hidden[select_hidden].get_weight(select_weight) < limit && hidden[select_hidden].get_weight(select_weight) > -limit) break;
+        }
+    }
+
+    bias();
+
+}
+
 void Neural_Net::find_best()
 {
 
     int trial_number_remember = 0;
     int fitness_number_max = 0;
-    int fitness_mem[10];
-    int trial_mem[10];
+    int *fitness_mem = new int[trial_number_limit];
+    int *trial_mem = new int[trial_number_limit];
+    //int fitness_mem[10];
+    //int trial_mem[10];
 
     ifstream fin;
     ofstream fout;
 
     fin.open("Fitness_Logs/top_fitness.txt");
     fin >> fitness_number_max;
-    //fitness_number_max = 0; //Helpful if specie not improving, doubt you'd need it
+
+    if (always_reset_fitness == 1)
+    {
+        fitness_number_max = 0; //Helpful if species is not improving, useful in initial stages
+    }
+
     fin.close();
 
-    char string[50] = "Fitness_Logs/trial0.txt";
+    char string[50] = "Fitness_Logs/trial00.txt";
 
-    for (int i = 0; i < 10; i++)
+    for (int i = 0; i < trial_number_limit; i++)
     {
         for (int j = 0; j < 50; j++)
         {
             if (string[j] == '\0')
             {
-                string[j - 5] = int_to_char(i);
+                //string[i - 5] = int_to_char(trial_mem[trial_number_remember]);
+                zero_to_hundred(i, string[j - 5], string[j - 6]);
                 break;
             }
         }
@@ -239,7 +325,7 @@ void Neural_Net::find_best()
         //cout << "Trial number recrod = " << trial_number_remember << endl;
     }
 
-    for (int i = 0; i < 10; i++)
+    for (int i = 0; i < trial_number_limit; i++)
     {
         //cout << trial_mem[i] << "\t" << fitness_mem[i] << endl;
         if (fitness_mem[i] > fitness_number_max)
@@ -255,7 +341,8 @@ void Neural_Net::find_best()
             {
                 if (string[i] == '\0')
                 {
-                    string[i - 5] = int_to_char(trial_mem[trial_number_remember]);
+                    //string[i - 5] = int_to_char(trial_mem[trial_number_remember]);
+                    zero_to_hundred(trial_mem[trial_number_remember], string[i - 5], string[i - 6]);
                     break;
                 }
             }
@@ -273,7 +360,8 @@ void Neural_Net::find_best()
 
     cout << "BEST TRIAL " << trial_mem[trial_number_remember] << " -> Fitness: " << fitness_mem[trial_number_remember] << endl;
 
-    
+    delete[]fitness_mem;
+    delete[]trial_mem;
 
     
     fin.open("Fitness_Logs/generation.txt");
@@ -304,13 +392,14 @@ void Neural_Net::load_best()
 {
     ifstream fin;
 
-    char string[50] = "Fitness_Logs/trial0.txt";
+    char string[50] = "Fitness_Logs/trial00.txt";
 
     for (int i = 0; i < 50; i++)
     {
         if (string[i] == '\0')
         {
-            string[i - 5] = int_to_char(trial_number);;
+            //string[i - 5] = int_to_char(trial_number);
+            zero_to_hundred(trial_number, string[i - 5], string[i - 6]);
             break;
         }
     }
@@ -381,4 +470,16 @@ char Neural_Net::int_to_char(int number)
         break;
     }
     return character;
+}
+
+void Neural_Net::zero_to_hundred(int number, char& index1, char& index2)
+{
+    int digit1 = number % 10;
+    int digit2 = number / 10 % 10;
+
+    //cout << "FIRST DIGIT IS " << int_to_char(digit1) << endl;
+    //cout << "SECON DIGIT IS " << int_to_char(digit2) << endl;
+    
+    index1 = int_to_char(digit1);
+    index2 = int_to_char(digit2);
 }

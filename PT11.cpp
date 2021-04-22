@@ -74,13 +74,22 @@ PT11::PT11()
 
 void PT11::init_neural()	//REF1-4 Initialize everytime the simulations starts over
 {
-	topology = new Neural_Net(11, 4, 3);	//Build neural network topology of input, hidden and output nodes. Include Bias for input & hidden
+	topology = new Neural_Net(11, 12, 4);	//Build neural network topology of input, hidden and output nodes. Include Bias for input & hidden
+
+	topology->set_trial_nb_limit(30);
 
 	flag_reset = 0;
 
 	topology->load_best();	//Load the best weight configuration with the highest fitness recorded as of yet
 
-	topology->randomize_weights();	//Perform either relative or fully randomize weightings for each trial
+	topology->randomize_weights();		//Perform either relative or fully randomize weightings for each trial
+	
+	
+	for (int i = 0; i < (rand()%(18)); i++)
+	{
+		//topology->randomize_just_one_weight();	//Change the weight of only one neuron
+	}
+	
 
 	cout << "Topology for pt11 Initialized!" << endl;
 }
@@ -106,8 +115,10 @@ void PT11::manual_set(int& pw_l, int& pw_r, int& pw_laser, int& laser)
 	pw_l = this->pw_l;
 	laser = 0;
 
+	/*
 	if (KEY('A')) pw_laser += 100;
 	if (KEY('D')) pw_laser -= 100;
+	*/
 	if (KEY('W')) laser = 1;
 
 }
@@ -259,7 +270,6 @@ void PT11::distance_sensor(Camera& view, PT11 enemy)
 				if (flag == 1) draw_point_rgb(view.return_image(), arrx[j], arry[j], 255, 255, 255);
 				
 			}
-			is_obstacle_before_enemy(arrx, arry, enemy, view);
 			break;
 		case 1:
 			for (int j = 0; j < Ln[i]; j++)
@@ -269,7 +279,7 @@ void PT11::distance_sensor(Camera& view, PT11 enemy)
 
 				arrx[j] += (Ax[i] + LL[i] * j) * cos(theta) - (Ay[i] + LL[i] * j * AF[i]) * sin(theta);
 				arry[j] += (Ax[i] + LL[i] * j) * sin(theta) + (Ay[i] + LL[i] * j * AF[i]) * cos(theta);
-				distance_input(arrx, arry, view, i);
+				//distance_input(arrx, arry, view, i);
 				if (flag == 1) draw_point_rgb(view.return_image(), arrx[j], arry[j], 255, 255, 255);
 			}
 			break;
@@ -343,6 +353,8 @@ void PT11::distance_sensor(Camera& view, PT11 enemy)
 		}
 
 		distance_input(arrx, arry, view, i);
+
+		if (i ==0) is_obstacle_before_enemy(arrx, arry, enemy, view);
 		
 		delete[]arrx;
 		delete[]arry;
@@ -418,7 +430,7 @@ void PT11::is_obstacle_before_enemy(int arrx[], int arry[], PT11 enemy, Camera& 
 
 	int* k = new int[Ln[0]];	//Can vary length of point series for collision accuracy
 
-	int distance_log_enemy = 0;
+	int distance_log_enemy = 1000;
 
 	for (int i2 = 0; i2 < Ln[0]; i2++)	//For each dot on the line of points, find position based on 1D image reference
 	{
@@ -429,7 +441,7 @@ void PT11::is_obstacle_before_enemy(int arrx[], int arry[], PT11 enemy, Camera& 
 		}
 		else
 		{
-			distance_log_enemy = 1000;
+			//distance_log_enemy = 1000;
 			break;
 		}
 
@@ -442,7 +454,7 @@ void PT11::is_obstacle_before_enemy(int arrx[], int arry[], PT11 enemy, Camera& 
 		}
 	}
 
-	//cout << distance_log[0] << "\t" << distance_log_enemy << endl;
+	//cout << distance_log[0] << "\t" << distance_log_enemy - 1<< endl;
 
 	if (distance_log[0] > distance_log_enemy-1)
 	{
@@ -456,8 +468,9 @@ void PT11::is_obstacle_before_enemy(int arrx[], int arry[], PT11 enemy, Camera& 
 	}
 
 	delete[]k;
+	
+	distance_enemy1 = sqrt(pow(enemy.get_x1() - x1, 2) + pow(enemy.get_y1() - y1, 2));
 	/*
-	//int distance_enemy1 = sqrt(pow(enemy.get_x1() - x1, 2) + pow(enemy.get_y1() - y1, 2));
 	//int distance_enemy2 = sqrt(pow(enemy.get_x2() - x1, 2) + pow(enemy.get_y2() - y1, 2));
 	int enemy_no_obs1;
 	int enemy_no_obs2;
@@ -703,7 +716,7 @@ void PT11::NeuroLearn(int& pw_l, int& pw_r, int& laser, int &trial_number)
 		topology->save_weights();
 		
 
-		if (trial_number >= 9)
+		if (trial_number >= topology->get_trial_nb_limit())
 		{
 			topology->find_best();
 			trial_number = 0;
@@ -716,8 +729,11 @@ void PT11::NeuroLearn(int& pw_l, int& pw_r, int& laser, int &trial_number)
 	//topology->find_best();
 
 	//cout << flag_reset << endl;
-	if (target_state == 1) fitness++;
-
+	//if (distance_enemy1 < 100) distance_enemy1 = 100;
+	//fitness = 800 -  distance_enemy1;
+	if (target_state == 1) fitness = fitness + 100;
+	//if (target_state == 1) fitness++;
+	fitness++;
 	//int distance_enemy1 = sqrt(pow(enemy.get_x1() - x1, 2) + pow(enemy.get_y1() - y1, 2));
 
 	//fitness = 
@@ -766,10 +782,49 @@ void PT11::NeuroLearn(int& pw_l, int& pw_r, int& laser, int &trial_number)
 	cout << "laser: " << topology->output[2].get_value() << endl;
 	*/
 
-	pw_l = topology->output[0].get_value() * 1000 + 1000;
-	pw_r = topology->output[1].get_value() * 1000 + 1000;
-	laser = topology->output[2].get_value();
-	
+	//Outputs are between -1 and 1, the functions below convert it to 1000 to 2000 for the "servo" control
+	//My guess is that the because there's so much going on, that getting 11 inputs into 2 outputs is risky.
+	//pw_l = topology->output[0].get_value() * 1000 + 1000;
+	//pw_r = topology->output[1].get_value() * 1000 + 1000;
+	//laser = topology->output[2].get_value();
+
+	double activation[4];
+	for (int i = 0; i < 4; i++)
+	{
+		activation[i] = topology->output[i].get_value();
+		
+		if (activation[i] >= 0.5) activation[i] = 1;
+		if (activation[i] < 0.5) activation[i] = 0;
+
+		cout << activation[i] << "      ";
+	}
+	cout << endl;
+
+	int action = 0;
+	if (activation[0] == 1) action = 1;
+	if (activation[1] == 1) action = 2;
+	if (activation[2] == 1) action = 3;
+	if (activation[3] == 1) action = 4;
+
+	switch (action)
+	{
+	case 1:
+		pw_l = 1000;
+		pw_r = 2000;
+		break;
+	case 2:
+		pw_l = 2000;
+		pw_r = 1000;
+		break;
+	case 3:
+		pw_l = 1000;
+		pw_r = 1000;
+		break;
+	case 4:
+		pw_l = 2000;
+		pw_r = 2000;
+		break;
+	}
 }
 
 void PT11::scout(int& pw_l, int& pw_r, int& pw_laser, int& laser)

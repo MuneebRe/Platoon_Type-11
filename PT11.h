@@ -36,6 +36,7 @@ private:
 	bool state_dir[2];	//Trigger to determine which side enemy located
 	bool flag_reset;
 	bool is_there_obstacle;
+	double distance_enemy1;
 
 	int Lx[8];
 	int Ly[8];
