@@ -275,7 +275,7 @@ int main()
 			//pt11.find_target(enemy);
 			pt11.distance_sensor(*view[0], enemy);
 			pt11.find_target(enemy);
-			pt11.highlight_view(*view[0], enemy);
+			//pt11.highlight_view(*view[0], enemy);
 
 			if (AI_player == 1)
 			{

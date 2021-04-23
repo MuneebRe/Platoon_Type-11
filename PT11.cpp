@@ -219,11 +219,11 @@ void PT11::fill_wheel_void(Camera& view)
 
 void PT11::distance_sensor(Camera& view, PT11 enemy)
 {	
-	Lx[0] = 30;		Ly[0] = 0;		LL[0] = 1;		Ln[0] = 600;			//Front
-	Lx[1] = -20;	Ly[1] = -55;	LL[1] = 1;		Ln[1] = 600;			//Front Right
-	Lx[2] = -40;	Ly[2] = 0;		LL[2] = 1;		Ln[2] = 600;			//Right
-	Lx[3] = -100;	Ly[3] = -10;	LL[3] = 1;		Ln[3] = 600;			//Back Right
-	Lx[4] = 40;		Ly[4] = 0;		LL[4] = 1;		Ln[4] = 600;			//Back
+	Lx[0] = 30;		Ly[0] = 0;		LL[0] = 6;		Ln[0] = 100;			//Front
+	Lx[1] = -20;	Ly[1] = -55;	LL[1] = 6;		Ln[1] = 100;			//Front Right
+	Lx[2] = -40;	Ly[2] = 0;		LL[2] = 6;		Ln[2] = 100;			//Right
+	Lx[3] = -100;	Ly[3] = -10;	LL[3] = 6;		Ln[3] = 100;			//Back Right
+	Lx[4] = 40;		Ly[4] = 0;		LL[4] = 6;		Ln[4] = 100;			//Back
 	Lx[5] = Lx[3];	Ly[5] = -Ly[3];	LL[5] = LL[3];	Ln[5] = Ln[3];		//Back Left
 	Lx[6] = Lx[2];	Ly[6] = Ly[2];	LL[6] = LL[2];	Ln[6] = Ln[2];		//Left
 	Lx[7] = Lx[1];	Ly[7] = -Ly[1];	LL[7] = LL[1];	Ln[7] = Ln[1];		//Top Left
@@ -382,7 +382,8 @@ void PT11::distance_input(int arrx[], int arry[], Camera& view, int i)
 		
 		if (arrx[i2] < 0 || arrx[i2] > view.return_a().width || arry[i2] < 0 || arry[i2] > view.return_a().height)
 		{
-			pa[k[i2]] = 255;
+			//pa[k[i2]] = 255;
+			distance_log[i] = i2;
 			break;
 		}
 		
@@ -918,8 +919,8 @@ void PT11::attack(int& pw_l, int& pw_r, int& pw_laser, int& laser)
 {
 	for (int i = 0; i < 8; i++)
 	{
-		//cout << "  dis-" << i << ": " << distance_log[i];
-		//if (i == 7) cout << endl;
+		cout << "  dis-" << i << ": " << distance_log[i];
+		if (i == 7) cout << endl;
 	}
 
 	int action = 3;
@@ -954,9 +955,9 @@ void PT11::highlight_view(Camera& view, PT11 enemy)
 {
 	int radar_radius = 0;
 	double theta_index = 0;
-	double theta_jump = 0.05;
+	double theta_jump = 0.1;
 	int radar_minimum = 50;
-	int radius_jump = 5;
+	int radius_jump = 10;
 	int radius_limit = 300;
 	int vector_x = 0;
 	int vector_y = 0;
@@ -968,6 +969,8 @@ void PT11::highlight_view(Camera& view, PT11 enemy)
 		theta_index = theta_index + theta_jump;
 
 		//if (theta_index < theta + 1.0 && theta_index > theta - 1.0) continue;
+
+		/*
 		if (theta_index < theta + 1.0 && theta_index > theta - 1.0)
 		{
 			radius_limit = 300;
@@ -976,7 +979,7 @@ void PT11::highlight_view(Camera& view, PT11 enemy)
 		{
 			radius_limit = 100;
 		}
-
+		*/
 		radar_radius = 0;
 		int* arrx = new int[radius_limit];		//Dynamic memory, can change number of points interested in using
 		int* arry = new int[radius_limit];		//Kinda like resolution. More points can make it a line
