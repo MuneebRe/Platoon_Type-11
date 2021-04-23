@@ -353,6 +353,7 @@ int main()
 	Serial port(false, "COM12", 1);		//Establish bluetooth communication with robot (real)
 
 	PT11 pt11(*view[0]);		//Make instance of robot (sim)
+	PT11 enemy(*view[0]);		//Make instance of enemy
 
 	// measure initial clock time
 	tc0 = high_resolution_time(); 
@@ -410,12 +411,33 @@ int main()
 			pt_j[i-6] = view[0]->get_jc();	//For each color
 		}
 
-		/*
+		pt11.set_coord(pt_i[2], pt_j[2], pt_i[0], pt_j[0]);
+		enemy.set_coord(pt_i[1], pt_j[1], pt_i[3], pt_j[3]);
+
+		view[0]->set_processing(1);			//Enable threshold processing and everything
+		view[0]->processing();				//Run process
+
+		view[0]->set_processing(11);		//Enable labeling processing and everything
+		view[0]->processing();				//Run process
+
+		pt11.fill_wheel_void(*view[0]);
+		pt11.label_nb_1 = (int)view[0]->label_at_coordinate(pt_i[2] + 15, pt_j[2] + 15);
+		pt11.label_nb_2 = (int)view[0]->label_at_coordinate(pt_i[0] + 15, pt_j[0] + 15);
+
+		enemy.fill_wheel_void(*view[0]);
+		enemy.label_nb_1 = (int)view[0]->label_at_coordinate(pt_i[1] + 15, pt_j[1] + 15);
+		enemy.label_nb_2 = (int)view[0]->label_at_coordinate(pt_i[3] + 15, pt_j[3] + 15);
+
+
+		view[0]->set_processing(3);			//Set and Prep for original copy
+		view[0]->processing();				//Make a copy of the rgb image
+
+	/*
 		for (int i = 0; i < 4; i++) {
 			cout << "\n Centroid (x,y), " << i << " = " << pt_i[i] << " , " << pt_j[i] << endl;
 		}
 		cout << "gurv: paused, press any key to continue";
-		*/
+	*/
 
 		for (int i = 0; i < 4; i++)
 		{
@@ -446,6 +468,7 @@ int main()
 		pt11.manual_set(pw_l, pw_r, pw_laser, laser);		//Control the bot. A W D for laser, arrows for bot
 
 		tc = high_resolution_time() - tc0;
+
 
 		set_inputs(pw_l,pw_r,pw_laser,laser,
 			light,light_gradient,light_dir,image_noise,

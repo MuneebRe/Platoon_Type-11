@@ -5,6 +5,7 @@ class Camera
 private:
 	image rgb, a, b, original, label, mag, theta;
 	i2byte nlabel;
+	int nlabels;
 	int cam_number, width, height, type;
 	bool state, is_simulator;
 	int processing_type;
@@ -40,6 +41,7 @@ public:
 	int find_object();
 	int track_object();
 	int search_object(int is, int js);
+	i2byte label_at_coordinate(int is, int js);
 
 	void red_filter();
 	void hue_filter(double min_hue, double max_hue, double min_sat, double max_sat, double min_val, double max_val);

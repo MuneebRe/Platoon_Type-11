@@ -143,19 +143,22 @@ void Camera::processing()
 		hue_filter(2, 9, 0.55, 0.75, 150, 250);			//Red Filter
 		break;
 	case 7:
-		//hue_filter(20, 40, 0.4, 0.6, 200, 260);		//Orange filter
+		hue_filter(20, 40, 0.4, 0.6, 200, 260);		//Orange filter
 		break;
 	case 8:
 		hue_filter(145, 165, 0.5, 0.70, 170, 190);	//Green Filter
 		break;
 	case 9:
-		//hue_filter(190, 210, 0.7, 0.85, 218, 235);		//Blue Filter
+		hue_filter(190, 210, 0.7, 0.85, 218, 235);		//Blue Filter
 		break;
 	case 10:
 		copy(original, rgb);
 		copy(rgb, a);
 		sobel(a, mag, theta);
 		copy(theta, rgb);
+	case 11:
+		label_image(a, label, nlabels);
+		break;
 	}
 	
 }
@@ -288,6 +291,31 @@ int Camera::select_object()		//Code from lecture, combined tracking with RGB to 
 
 		return 0; // no errors
 	
+}
+
+
+i2byte Camera::label_at_coordinate(int is, int js)
+{
+	i2byte* pl;
+
+	ibyte* p, * pc;
+
+	p = rgb.pdata;
+
+	//label_image(a, label, nlabels);
+
+	//draw_point_rgb(rgb, is, js, 0, 255, 0);
+
+	if (is < 0) is = 0;
+	if (is > b.width - 1) is = b.width - 1;
+	if (js < 0) js = 0;
+	if (js > b.height - 1) js = b.height - 1;
+
+	pl = (i2byte*)label.pdata;
+
+	nlabel = *(pl + js * label.width + is);
+
+	return nlabel;
 }
 
 int Camera::search_object(int is, int js)		//Code from lecture

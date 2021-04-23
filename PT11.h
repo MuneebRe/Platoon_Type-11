@@ -6,9 +6,13 @@ class PT11
 public:
 	int pw_l, pw_r, pw_laser, laser;
 
+	int label_nb_1;
+	int label_nb_2;
+
 private:
-	image radar_label, radar_rgb, radar_greyscale;
-	i2byte radar_nlabel;
+	image radar_label, radar_rgb, radar_greyscale;	//gurv
+	i2byte radar_nlabel;		//gurv
+	int radar_nlabels, radar_robot_objects[5]; //front circle and back circle of friendly, back of enemy, both front wheels of friendly
 	int width, height, type;
 	double x1,x2, dx, ddx;
 	double y1,y2, dy, ddy;
@@ -33,9 +37,12 @@ public:
 	void set_coord(double x1, double y1, double x2, double y2);
 	void collision_points(Camera &view);
 	void check_collision(int arrx[], int arry[], Camera &view, int i);
-	void acquire_camera_image(Camera &view);
-	void get_safe_zone(Camera &view, int pt_i[4], int pt_j[4]);
-	void draw_safe_zone(int* line_array_i, int* line_array_j, int size, Camera &view);
+	void acquire_camera_image(Camera &view);   //gurv
+	void get_safe_zone(Camera &view, int pt_i[4], int pt_j[4]);			//gurv
+	void draw_safe_zone(int* line_array_i, int* line_array_j, int size, Camera &view);		//gurv
+	void identify_radar_objects(int pt_i[4], int pt_j[4], Camera& view); //gurv
+	void calculate_theta(double x1, double y1, double x2, double y2, double& theta);
+	void fill_wheel_void(Camera& view);
 	~PT11();
 };
 
