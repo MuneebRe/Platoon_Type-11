@@ -78,6 +78,10 @@ public:
 	void NeuroLearn(int& pw_l, int& pw_r, int& laser, int &trial_number);
 
 	void scout(int& pw_l, int& pw_r, int& pw_laser, int& laser);
+	void attack(int& pw_l, int& pw_r, int& pw_laser, int& laser);
+
+	void highlight_view(Camera& view, PT11 enemy);
+	void hide_shadows(int arrx[], int arry[], Camera& view, double theta_index, int& radar_radius, int radius_limit, bool& enemy_trigger, PT11 enemy, int radius_jump);
 
 	~PT11();
 };

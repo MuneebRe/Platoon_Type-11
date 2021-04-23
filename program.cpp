@@ -65,8 +65,8 @@ int main()
 	for (int i = 1; i <= N_obs; i++)
 	{
 		x_obs[i] = 300;
-		y_obs[i] = 170 * i - 70;
-		y_obs[i] = 0;
+		y_obs[i] = 270 * i - 70 ;
+		//y_obs[i] = 0;
 		size_obs[i] = 1.0;
 	}
 
@@ -125,10 +125,10 @@ int main()
 	static int trial_number = 0;
 	cout << "Trial Number " << trial_number << " begin!" << endl;
 	// set robot initial position (pixels) and angle (rad)
-	x0 = 550;
-	y0 = 225;
-	theta0 = 0;
-	//theta0 = rand() % 5;
+	x0 = 470;
+	y0 = 300;
+	//theta0 = 0;
+	theta0 = 3.14159/2;
 	set_robot_position(x0,y0,theta0);
 	
 	// set opponent initial position (pixels) and angle (rad)
@@ -147,7 +147,7 @@ int main()
 	laser = 0; // laser input (0 - off, 1 - fire)
 	
 	// paramaters
-	max_speed = 700; // 100; // max wheel speed of robot (pixels/s)
+	max_speed = 100; // 100; // max wheel speed of robot (pixels/s)
 	opponent_max_speed = 100; // 100; // max wheel speed of opponent (pixels/s)
 	
 	// lighting parameters (not currently implemented in the library)
@@ -188,7 +188,7 @@ int main()
 	//Serial port(false, "COM12", 1);		//Establish bluetooth communication with robot (real)
 
 	//Enable Neural Network for enemy?
-	static bool AI_player = 1;	//for player
+	static bool AI_player = 0;	//for player
 	static bool AI_enemy = 0;	//REF1-1 enemy will follow weight pattern as pt11
 
 	PT11 pt11;		//Make instance of robot (sim)
@@ -248,9 +248,6 @@ int main()
 				pt_i[i-6] = view[0]->get_ic();	//And put them in this array
 				pt_j[i-6] = view[0]->get_jc();	//For each color
 			}
-
-			
-			
 			
 
 			pt11.set_coord(pt_i[2], pt_j[2], pt_i[0], pt_j[0]);
@@ -259,14 +256,16 @@ int main()
 			view[0]->set_processing(1);			//Enable threshold processing and everything
 			view[0]->processing();				//Run process
 		
+			pt11.fill_wheel_void(*view[0]);
+			enemy.fill_wheel_void(*view[0]);
+
 			view[0]->set_processing(11);		//Enable labeling processing and everything
 			view[0]->processing();				//Run process
 
-			pt11.fill_wheel_void(*view[0]);
+			
 			pt11.label_nb_1 = (int)view[0]->label_at_coordinate(pt_i[2] + 15, pt_j[2] + 15);
 			pt11.label_nb_2 = (int)view[0]->label_at_coordinate(pt_i[0] + 15, pt_j[0] + 15);
 
-			enemy.fill_wheel_void(*view[0]);
 			enemy.label_nb_1 = (int)view[0]->label_at_coordinate(pt_i[1] + 15, pt_j[1] + 15);
 			enemy.label_nb_2 = (int)view[0]->label_at_coordinate(pt_i[3] + 15, pt_j[3] + 15);
 
@@ -276,6 +275,7 @@ int main()
 			//pt11.find_target(enemy);
 			pt11.distance_sensor(*view[0], enemy);
 			pt11.find_target(enemy);
+			pt11.highlight_view(*view[0], enemy);
 
 			if (AI_player == 1)
 			{
@@ -285,6 +285,7 @@ int main()
 			{
 				pt11.manual_set(pw_l, pw_r, pw_laser, laser);		//Control the bot. A W D for laser, arrows for bot
 				//pt11.scout(pw_l, pw_r, pw_laser, laser);
+				//pt11.attack(pw_l, pw_r, pw_laser, laser);
 			}
 
 			//enemy.collision_points(*view[0]);
@@ -293,7 +294,7 @@ int main()
 			
 			if (AI_enemy == 1)		//REF1-3 Enable collision detection, target detection, and 8 sides distance sensor, run AI.
 			{
-				enemy.NeuroLearn(pw_l_o, pw_r_o, laser, trial_number);
+				//enemy.NeuroLearn(pw_l_o, pw_r_o, laser, trial_number);
 			}
 			else
 			{

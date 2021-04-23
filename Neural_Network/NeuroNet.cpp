@@ -43,7 +43,7 @@ void Neural_Net::bias()
 
 void Neural_Net::calculate_hidden()
 {
-    bias();
+    if(is_bias == 1) bias();
 
     for (int i = 0; i < nb_hidden; i++)
     {
@@ -57,7 +57,7 @@ void Neural_Net::calculate_hidden()
 
 void Neural_Net::calculate_output()
 {
-    bias();
+    if (is_bias == 1) bias();
 
     for (int i = 0; i < nb_output; i++)
     {
@@ -121,7 +121,7 @@ void Neural_Net::save_weights()
     fout << fitness_number << endl;
     
     fout << fixed;
-    fout << setprecision(2);
+    fout << setprecision(4);
     
     for (int i = 0; i < nb_hidden; i++)
     {
@@ -139,7 +139,7 @@ void Neural_Net::save_weights()
         }
     }
 
-    bias();
+    if (is_bias == 1) bias();
 
     fout.close();
 }
@@ -150,17 +150,17 @@ void Neural_Net::randomize_weights()
     always_reset_fitness = 0;
     
     bool flag0 = 0;     //flag0 is just to see if all the weights are initialized to zero
-    bool flag1 = 1;     //flag1 is if you want randomization to occur relative to the weights stored in best.txt
-    bool flag2 = 0;     //flag2 is if you want to test fully randomly unrelated to best.txt
+    bool flag1 = 0;     //flag1 is if you want randomization to occur relative to the weights stored in best.txt
+    bool flag2 = 1;     //flag2 is if you want to test fully randomly unrelated to best.txt
 
-    double _rando0 = 0.00;  //Good for resetting all weights, kind of
-    double _rando1 = 0.50;  //if range desired is -0.25 to 0.25, just write 0.25. weights will add to weight recorded by best.txt with a value between [-0.25, +0.25] Useful for tuning species.
+    double _rando0 = 0.15;  //Good for resetting all weights, kind of
+    double _rando1 = 0.30;  //if range desired is -0.25 to 0.25, just write 0.25. weights will add to weight recorded by best.txt with a value between [-0.25, +0.25] Useful for tuning species.
     double _rando2 = 1.00;  //If value 0.25, Weight will pick a value between[-0.25, +0.25].Useful to generate different species.
     
-    double limit = 1.00;     //Limits the weighting so it's kept between [1.0 - 1.0]. Also, bias( ) is included, if you know what I mean.
+    double limit = 1.0000;     //Limits the weighting so it's kept between [1.0 - 1.0]. Also, bias( ) is included, if you know what I mean.
 
-    int rando1 = _rando1 * 100 * 2;     //Double to int convert
-    int rando2 = _rando2 * 100 * 2;     //Double to int convert 
+    int rando1 = _rando1 * 10000 * 2;     //Double to int convert
+    int rando2 = _rando2 * 10000 * 2;     //Double to int convert 
 
     for (int i = 0; i < nb_hidden; i++)
     {
@@ -169,8 +169,8 @@ void Neural_Net::randomize_weights()
             while (1)
             {
                 if (flag0 == 1) input[j].get_weight(i) = _rando0;
-                if (flag1 == 1) input[j].get_weight(i) = input[j].get_weight(i) + (double)(((rand() % rando1) - (rando1 / 2)) / 100.0);
-                if (flag2 == 1) input[j].get_weight(i) = (double)(((rand() % rando2) - (rando2 / 2)) / 100.0);
+                if (flag1 == 1) input[j].get_weight(i) = input[j].get_weight(i) + (double)(((rand() % rando1) - (rando1 / 2)) / 10000.000);
+                if (flag2 == 1) input[j].get_weight(i) = (double)(((rand() % rando2) - (rando2 / 2)) / 10000.000);
                 
                 if (input[j].get_weight(i) < -limit) input[j].get_weight(i) = -limit;
                 if (input[j].get_weight(i) > limit) input[j].get_weight(i) = limit;
@@ -187,8 +187,8 @@ void Neural_Net::randomize_weights()
             while ( 1 )
             {
                 if (flag0 == 1) hidden[j].get_weight(i) = _rando0;
-                if (flag1 == 1) hidden[j].get_weight(i) = hidden[j].get_weight(i) + (double)(((rand() % rando1) - (rando1 / 2)) / 100.0);
-                if (flag2 == 1) hidden[j].get_weight(i) = (double)(((rand() % rando2) - (rando2 / 2)) / 100.0);
+                if (flag1 == 1) hidden[j].get_weight(i) = hidden[j].get_weight(i) + (double)(((rand() % rando1) - (rando1 / 2)) / 10000.0);
+                if (flag2 == 1) hidden[j].get_weight(i) = (double)(((rand() % rando2) - (rando2 / 2)) / 10000.0);
                 
                 if (hidden[j].get_weight(i) < -limit) hidden[j].get_weight(i) = -limit;
                 if (hidden[j].get_weight(i) > limit) hidden[j].get_weight(i) = limit;
@@ -197,7 +197,7 @@ void Neural_Net::randomize_weights()
             } 
         }
     }
-    bias();
+    //bias();
 
 }
 
@@ -216,8 +216,8 @@ void Neural_Net::randomize_just_one_weight()
 
     double limit = 1.00;     //Limits the weighting so it's kept between [1.0 - 1.0]. Also, bias( ) is included, if you know what I mean.
 
-    int rando1 = _rando1 * 100 * 2;     //Double to int convert
-    int rando2 = _rando2 * 100 * 2;     //Double to int convert
+    int rando1 = _rando1 * 10000 * 2;     //Double to int convert
+    int rando2 = _rando2 * 10000 * 2;     //Double to int convert
 
     int layer_selection = rand() % 2;
 
@@ -236,8 +236,8 @@ void Neural_Net::randomize_just_one_weight()
         while (1)
         {
             if (flag0 == 1) input[select_input].get_weight(select_weight) = _rando0;
-            if (flag1 == 1) input[select_input].get_weight(select_weight) = input[select_input].get_weight(select_weight) + (double)(((rand() % rando1) - (rando1 / 2)) / 100.0);
-            if (flag2 == 1) input[select_input].get_weight(select_weight) = (double)(((rand() % rando2) - (rando2 / 2)) / 100.0);
+            if (flag1 == 1) input[select_input].get_weight(select_weight) = input[select_input].get_weight(select_weight) + (double)(((rand() % rando1) - (rando1 / 2)) / 10000.0);
+            if (flag2 == 1) input[select_input].get_weight(select_weight) = (double)(((rand() % rando2) - (rando2 / 2)) / 10000.0);
 
             if (input[select_input].get_weight(select_weight) < -limit) input[select_input].get_weight(select_weight) = -limit;
             if (input[select_input].get_weight(select_weight) > limit) input[select_input].get_weight(select_weight) = limit;
@@ -261,8 +261,8 @@ void Neural_Net::randomize_just_one_weight()
         while (1)
         {
             if (flag0 == 1) hidden[select_hidden].get_weight(select_weight) = _rando0;
-            if (flag1 == 1) hidden[select_hidden].get_weight(select_weight) = hidden[select_hidden].get_weight(select_weight) + (double)(((rand() % rando1) - (rando1 / 2)) / 100.0);
-            if (flag2 == 1) hidden[select_hidden].get_weight(select_weight) = (double)(((rand() % rando2) - (rando2 / 2)) / 100.0);
+            if (flag1 == 1) hidden[select_hidden].get_weight(select_weight) = hidden[select_hidden].get_weight(select_weight) + (double)(((rand() % rando1) - (rando1 / 2)) / 10000.0);
+            if (flag2 == 1) hidden[select_hidden].get_weight(select_weight) = (double)(((rand() % rando2) - (rando2 / 2)) / 10000.0);
 
             if (hidden[select_hidden].get_weight(select_weight) < -limit) hidden[select_hidden].get_weight(select_weight) = -limit;
             if (hidden[select_hidden].get_weight(select_weight) > limit) hidden[select_hidden].get_weight(select_weight) = limit;
@@ -271,7 +271,7 @@ void Neural_Net::randomize_just_one_weight()
         }
     }
 
-    bias();
+    //bias();
 
 }
 

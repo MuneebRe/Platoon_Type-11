@@ -74,8 +74,8 @@ PT11::PT11()
 
 void PT11::init_neural()	//REF1-4 Initialize everytime the simulations starts over
 {
-	topology = new Neural_Net(11, 12, 4);	//Build neural network topology of input, hidden and output nodes. Include Bias for input & hidden
-
+	topology = new Neural_Net(11, 11, 2);	//Build neural network topology of input, hidden and output nodes. Include Bias for input & hidden
+	topology->set_bias(false);
 	topology->set_trial_nb_limit(30);
 
 	flag_reset = 0;
@@ -85,7 +85,7 @@ void PT11::init_neural()	//REF1-4 Initialize everytime the simulations starts ov
 	topology->randomize_weights();		//Perform either relative or fully randomize weightings for each trial
 	
 	
-	for (int i = 0; i < (rand()%(18)); i++)
+	for (int i = 0; i < (rand()%(16)); i++)
 	{
 		//topology->randomize_just_one_weight();	//Change the weight of only one neuron
 	}
@@ -204,39 +204,26 @@ void PT11::fill_wheel_void(Camera& view)
 	int y_draw;
 
 	int Lx = 0;
-	int Ly;
+	int Ly = -13;
+	int length = 55;
 
-	
-	Ly = -29;
-	x_draw = x1 + Lx * cos(theta) - Ly * sin(theta);
-	y_draw = y1 + Lx * sin(theta) + Ly * cos(theta);
-	draw_point_rgb(view.return_image(), x_draw, y_draw, 255, 255, 255);
-
-	Ly = -30;
-	x_draw = x1 + Lx * cos(theta) - Ly * sin(theta);
-	y_draw = y1 + Lx * sin(theta) + Ly * cos(theta);
-	draw_point_rgb(view.return_image(), x_draw, y_draw, 255, 255, 255);
-	
-	Ly = 29;
-	x_draw = x1 + Lx * cos(theta) - Ly * sin(theta);
-	y_draw = y1 + Lx * sin(theta) + Ly * cos(theta);
-	draw_point_rgb(view.return_image(), x_draw, y_draw, 255, 255, 255);
-	
-	Ly = 30;
-	x_draw = x1 + Lx * cos(theta) - Ly * sin(theta);
-	y_draw = y1 + Lx * sin(theta) + Ly * cos(theta);
-	draw_point_rgb(view.return_image(), x_draw, y_draw, 255, 255, 255);
+	for (int i = -length/2; i < length; i++)
+	{
+		x_draw = x1 + Lx * cos(theta) - (Ly + i) * sin(theta);
+		y_draw = y1 + Lx * sin(theta) + (Ly + i) * cos(theta);
+		draw_point(view.return_a(), x_draw, y_draw, 255);
+	}
 
 }
 
 
 void PT11::distance_sensor(Camera& view, PT11 enemy)
 {	
-	Lx[0] = 30;		Ly[0] = 0;		LL[0] = 10;		Ln[0] = 80;			//Front
-	Lx[1] = -20;	Ly[1] = -55;	LL[1] = 8;		Ln[1] = 20;			//Front Right
-	Lx[2] = -40;	Ly[2] = 0;		LL[2] = 10;		Ln[2] = 20;			//Right
-	Lx[3] = -100;	Ly[3] = -10;	LL[3] = 8;		Ln[3] = 20;			//Back Right
-	Lx[4] = 40;		Ly[4] = 0;		LL[4] = 10;		Ln[4] = 20;			//Back
+	Lx[0] = 30;		Ly[0] = 0;		LL[0] = 1;		Ln[0] = 600;			//Front
+	Lx[1] = -20;	Ly[1] = -55;	LL[1] = 1;		Ln[1] = 600;			//Front Right
+	Lx[2] = -40;	Ly[2] = 0;		LL[2] = 1;		Ln[2] = 600;			//Right
+	Lx[3] = -100;	Ly[3] = -10;	LL[3] = 1;		Ln[3] = 600;			//Back Right
+	Lx[4] = 40;		Ly[4] = 0;		LL[4] = 1;		Ln[4] = 600;			//Back
 	Lx[5] = Lx[3];	Ly[5] = -Ly[3];	LL[5] = LL[3];	Ln[5] = Ln[3];		//Back Left
 	Lx[6] = Lx[2];	Ly[6] = Ly[2];	LL[6] = LL[2];	Ln[6] = Ln[2];		//Left
 	Lx[7] = Lx[1];	Ly[7] = -Ly[1];	LL[7] = LL[1];	Ln[7] = Ln[1];		//Top Left
@@ -405,6 +392,10 @@ void PT11::distance_input(int arrx[], int arry[], Camera& view, int i)
 			//cout << i2 << endl;
 			distance_log[i] = i2;
 			break;
+		}
+		else
+		{
+			distance_log[i] = Ln[i];
 		}
 	}
 
@@ -732,8 +723,8 @@ void PT11::NeuroLearn(int& pw_l, int& pw_r, int& laser, int &trial_number)
 	//if (distance_enemy1 < 100) distance_enemy1 = 100;
 	//fitness = 800 -  distance_enemy1;
 	if (target_state == 1) fitness = fitness + 100;
-	//if (target_state == 1) fitness++;
-	fitness++;
+	if (target_state == 1) fitness++;
+	//fitness++;
 	//int distance_enemy1 = sqrt(pow(enemy.get_x1() - x1, 2) + pow(enemy.get_y1() - y1, 2));
 
 	//fitness = 
@@ -782,12 +773,17 @@ void PT11::NeuroLearn(int& pw_l, int& pw_r, int& laser, int &trial_number)
 	cout << "laser: " << topology->output[2].get_value() << endl;
 	*/
 
-	//Outputs are between -1 and 1, the functions below convert it to 1000 to 2000 for the "servo" control
+	//Outputs are between 0 and 1, the functions below convert it to 1000 to 2000 for the "servo" control
 	//My guess is that the because there's so much going on, that getting 11 inputs into 2 outputs is risky.
-	//pw_l = topology->output[0].get_value() * 1000 + 1000;
-	//pw_r = topology->output[1].get_value() * 1000 + 1000;
+	//f it, this is still the better option, since sending one discret command interferes with othoers.
+	//In this one, however, I'm making so if both outputs are 0, then the car will go straight and crash,
+	//instead of rotating counter clockwise endlessly...
+	pw_l = topology->output[0].get_value() * 1000 + 1000;  //1000-2000
+	//pw_r = topology->output[1].get_value() * 1000 + 1000; 
+	pw_r = topology->output[1].get_value() * -1000 + 2000;  //2000-1000
 	//laser = topology->output[2].get_value();
 
+	/*
 	double activation[4];
 	for (int i = 0; i < 4; i++)
 	{
@@ -825,6 +821,37 @@ void PT11::NeuroLearn(int& pw_l, int& pw_r, int& laser, int &trial_number)
 		pw_r = 2000;
 		break;
 	}
+	*/
+
+
+
+	/*
+
+	int u[2];
+
+	u[0] = 0;
+	u[1] = 0;
+
+	double activation[2];
+	for (int i = 0; i < 2; i++)
+	{
+		activation[i] = topology->output[i].get_value();
+		cout << activation[i] << "      ";
+	}
+
+	if (activation[0] >= 0.5) u[0] = 500;
+	if (activation[0] < 0.5) u[0] = -500;
+	if (activation[1] >= 0.5) u[1] = -450;
+	if (activation[1] < 0.5) u[1] = 450;
+
+	this->pw_l = 1500 + u[1] - u[0];
+	this->pw_r = 1500 + u[1] + u[0];
+
+	//cout << this->pw_l << "\t" << this->pw_r << endl;
+
+	pw_r = this->pw_r;
+	pw_l = this->pw_l;
+	*/
 }
 
 void PT11::scout(int& pw_l, int& pw_r, int& pw_laser, int& laser)
@@ -885,6 +912,198 @@ void PT11::scout(int& pw_l, int& pw_r, int& pw_laser, int& laser)
 		break;
 	}
 	
+}
+
+void PT11::attack(int& pw_l, int& pw_r, int& pw_laser, int& laser)
+{
+	for (int i = 0; i < 8; i++)
+	{
+		//cout << "  dis-" << i << ": " << distance_log[i];
+		//if (i == 7) cout << endl;
+	}
+
+	int action = 3;
+
+	
+
+	//if (distance_log[0] < 10 && state_dir[0] == 1) action = 0;
+	//if (state_dir[0] == 1) action = 0;
+	//if (state_dir[1] == 1)  action = 1;
+	//if (target_state == 1 && distance_log[0] > 10) action = 2;
+	//if (state_dir[0] == 1 && (distance_log[0] < 10 || distance_log[7] < 10)) action = 2;
+
+	switch (action)
+	{
+	case 0:					//Turn left
+		pw_l = 2000;
+		pw_r = 2000;
+		break;
+	case 1:					//Turn right
+		pw_l = 1000;
+		pw_r = 1000;
+		break;
+	case 2:					//Go Straight
+		pw_l = 1000;
+		pw_r = 2000;
+		break;
+	}
+	
+}
+
+void PT11::highlight_view(Camera& view, PT11 enemy)
+{
+	int radar_radius = 0;
+	double theta_index = 0;
+	double theta_jump = 0.05;
+	int radar_minimum = 50;
+	int radius_jump = 5;
+	int radius_limit = 300;
+	int vector_x = 0;
+	int vector_y = 0;
+	bool enemy_trigger = 0;
+
+	while (theta_index < (2 * M_PI))
+	{
+		bool enemy_trigger = 0;
+		theta_index = theta_index + theta_jump;
+
+		//if (theta_index < theta + 1.0 && theta_index > theta - 1.0) continue;
+		if (theta_index < theta + 1.0 && theta_index > theta - 1.0)
+		{
+			radius_limit = 300;
+		}
+		else
+		{
+			radius_limit = 100;
+		}
+
+		radar_radius = 0;
+		int* arrx = new int[radius_limit];		//Dynamic memory, can change number of points interested in using
+		int* arry = new int[radius_limit];		//Kinda like resolution. More points can make it a line
+
+		for (int radius = 0; radius < radius_limit; radius += radius_jump)
+		{
+
+			arrx[radius] = x1 + radius * cos(theta_index);
+			arry[radius] = y1 + radius * sin(theta_index);
+			
+			//draw_point_rgb(view.return_image(), arrx[radius], arry[radius], 255, 0, 0);
+		}
+
+		hide_shadows(arrx, arry, view, theta_index, radar_radius, radius_limit, enemy_trigger, enemy, radius_jump);
+		//cout << radar_radius << endl;
+		
+		vector_x += radar_radius * cos(theta_index);
+		vector_y += radar_radius * sin(theta_index);
+
+		for (int radius = radar_minimum; radius < radar_radius; radius+=radius_jump)
+		{
+			if (arrx[radius] < 0 || arrx[radius] > view.return_a().width || arry[radius] < 0 || arry[radius] > view.return_a().height)
+			{
+				break;
+			}
+			draw_point_rgb(view.return_image(), arrx[radius], arry[radius], 255, 0, 0);
+
+			if (enemy_trigger == 1)
+			{
+				draw_point_rgb(view.return_image(), arrx[radius], arry[radius], 0, 255, 255);
+				//enemy_trigger = 0;
+			}
+		}
+
+		delete[]arrx;
+		delete[]arry;
+	}
+
+	cout << vector_x << "  " << vector_y << endl;
+
+	double resultant_theta;
+	double resultant_mag = sqrt(pow((vector_x), 2) + pow((vector_y), 2));
+
+	calculate_theta(vector_x, vector_y, 0, 0, resultant_theta);
+	//cout << resultant_theta << endl;
+
+	int x_draw, y_draw;
+	for (int radius = radar_minimum; radius < resultant_mag; radius += radius_jump)
+	{
+		x_draw = x1 + radius * cos(resultant_theta);
+		y_draw = y1 + radius * sin(resultant_theta);
+
+		if (x_draw < 0 || x_draw > view.return_a().width || y_draw < 0 || y_draw > view.return_a().height)
+		{
+			break;
+		}
+
+		draw_point_rgb(view.return_image(), x_draw, y_draw, 0, 255, 0);
+	}
+}
+
+void PT11::hide_shadows(int arrx[], int arry[], Camera& view, double theta_index, int& radar_radius, int radius_limit, bool& enemy_trigger, PT11 enemy, int radius_jump)
+{
+	int what_label;
+
+	copy(view.return_image(), view.return_a());
+
+	ibyte* pa;
+
+	pa = view.return_a().pdata;
+
+	int* k = new int[radius_limit];	//Can vary length of point series for collision accuracy
+	
+
+	for (int i2 = 0; i2 < radius_limit; i2+= radius_jump)	//For each dot on the line of points, find position based on 1D image reference
+	{
+		if (arrx[i2] > 0 && arrx[i2] < view.return_a().width && arry[i2] > 0 && arry[i2] < view.return_a().height)
+		{
+			k[i2] = arrx[i2] + view.return_a().width * arry[i2];
+		}
+		else {
+			k[i2] = 1 + view.return_a().width;
+		}
+	}
+
+	for (int i2 = 0; i2 < radius_limit; i2 += radius_jump)	//If either point has 255 at pointer, turn on collision state
+	{
+
+		if (arrx[i2] < 0 || arrx[i2] > view.return_a().width || arry[i2] < 0 || arry[i2] > view.return_a().height)
+		{
+			pa[k[i2]] = 255;
+			//radar_radius = i2;
+			break;
+		}
+
+		what_label = view.label_at_coordinate(arrx[i2], arry[i2]);
+
+		if (what_label == label_nb_1 || what_label == label_nb_2)
+		{
+			continue;
+		}
+		
+		
+		if (what_label == enemy.label_nb_1 || what_label == enemy.label_nb_2)
+		{
+			enemy_trigger = 1;
+		}
+		
+		//cout << (int)pa[k[i2]] << "\t" << i2 << endl;
+		if (pa[k[i2]] == 255)
+		{
+			//cout << i2 << endl;
+			//distance_log[i] = i2;
+			radar_radius = i2;
+			break;
+		}
+		else
+		{
+			radar_radius = radius_limit;
+			//distance_log[i] = Ln[i];
+			
+		}
+	}
+
+
+	delete[]k;
+
 }
 
 void PT11::label_enemy(Camera& view, PT11 enemy)
