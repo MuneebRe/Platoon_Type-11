@@ -1228,8 +1228,10 @@ void PT11::draw_safe_zone(int* line_array_i, int* line_array_j, int size, Camera
 	size1 = size;
 
 	p_greyscale = radar_greyscale.pdata;	//Points to binary image
-	p_rgb = view.return_image().pdata;		//Points to LIVE rgb image UPDATE: Make it point to radar rgb image to create mask
+	//p_rgb = view.return_image().pdata;		//Points to LIVE rgb image UPDATE: Make it point to radar rgb image to create mask
 	p_label = (i2byte*)view.return_label().pdata;	//Points to label image from camera class, since label_nb_1 and label_nb_2 are labels from this image
+	p_rgb = radar_rgb.pdata;					//Mask is created on radar_rgb, holding C will copy the mask to the viewable "rgb" image in Camera class (written in at the end of get_safe_zone()
+
 
 	for (i = 70; i < size1; i++) {
 		x = line_array_i[i];		//x-coordinate of pixel 
@@ -1496,6 +1498,10 @@ void PT11::get_safe_zone(Camera& view, PT11 enemy, int pt_i[4], int pt_j[4]) {
 
 		size = 0;		//Very important, reset array back to 0 element for next line
 
+	}
+
+	if (KEY('C')) {
+		copy(radar_rgb, view.return_image());
 	}
 
 	delete[] line_array_i;

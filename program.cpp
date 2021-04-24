@@ -309,8 +309,8 @@ int main()
 				//enemy.manual_set(pw_l_o, pw_r_o, pw_laser_o, laser_o);
 			}
 
-			//view[0]->set_processing(3);	//Without this, we would see a thresholded greyscale image of rgb, this brings the original image back.
-			//view[0]->processing();
+			view[0]->set_processing(3);	//Without this, we would see a thresholded greyscale image of rgb, this brings the original image back.
+			view[0]->processing();
 
 			for (int i = 0; i < 4; i++)
 			{
@@ -329,7 +329,7 @@ int main()
 			//draw_point_rgb(view[0]->return_image(), pt_i[1], pt_j[1], 0, 0, 255);
 			//draw_point_rgb(view[0]->return_image(), pt_i[3], pt_j[3], 0, 0, 255);
 
-			//pt11.get_safe_zone(*view[0], enemy, pt_i, pt_j);		//This function draws directly onto the latest RGB before its viewed on screen
+			pt11.get_safe_zone(*view[0], enemy, pt_i, pt_j);		//This function draws directly onto the latest RGB before its viewed on screen
 
 			view[index]->view();	//View the the processed image MUNEEB REF 
 			//view[0]->view();
