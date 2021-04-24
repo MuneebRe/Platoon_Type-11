@@ -160,6 +160,9 @@ void Camera::processing()
 	case 11:
 		label_image(a, label, nlabels);
 		break;
+	case 12:
+		copy(original, rgb);		//Bring back the original image to rgb
+		break;
 	}
 	
 }

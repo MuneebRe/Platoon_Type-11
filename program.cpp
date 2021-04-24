@@ -48,28 +48,28 @@ int main()
 	width1  = 640;
 	height1 = 480;
 	
-	/*
+	
 	// number of obstacles
 	N_obs  = 2;
-
+	/*
 	x_obs[1] = 300; // pixels
-	y_obs[1] = 0; // pixels
+	y_obs[1] = 200; // pixels
 	size_obs[1] = 1.0; // scale factor 1.0 = 100% (not implemented yet)	
 
 	x_obs[2] = 300;// 135; // pixels
 	y_obs[2] = 70;// 135; // pixels
 	size_obs[2] = 1.0; // scale factor 1.0 = 100% (not implemented yet)	
 	*/
-
+	/*
 	N_obs = 5;
 	for (int i = 1; i <= N_obs; i++)
 	{
 		x_obs[i] = 300;
-		y_obs[i] = 270 * i - 70 ;
+		y_obs[i] = 70 * i - 70 ;
 		//y_obs[i] = 0;
 		size_obs[i] = 1.0;
 	}
-
+	*/
 	// set robot model parameters ////////
 	
 	D = 121.0; // distance between front wheels (pixels)
@@ -127,14 +127,15 @@ int main()
 	// set robot initial position (pixels) and angle (rad)
 	x0 = 470;
 	y0 = 300;
-	//theta0 = 0;
-	theta0 = 3.14159/2;
+	theta0 = 0;
+	//theta0 = 3.14159/2;
 	set_robot_position(x0,y0,theta0);
 	
 	// set opponent initial position (pixels) and angle (rad)
-	x0 = 160;
-	y0 = 170;
-	theta0 = 3.14159/4;
+	x0 = 50;
+	y0 = 400;
+	//theta0 = 3.14159/4;
+	theta0 = 3.14159 / 2;
 	set_opponent_position(x0,y0,theta0);
 
 	// set initial inputs / on-line adjustable parameters /////////	
@@ -302,11 +303,13 @@ int main()
 				//pt11.attack(pw_l, pw_r, pw_laser, laser);
 				pt11.flee(pw_l, pw_r, pw_laser,laser, tc0);
 			}
-
-			//enemy.collision_points(*view[0]);
-			//enemy.find_target(pt11);
-			//enemy.distance_sensor(*view[0], pt11);
-			
+			/*
+			enemy.collision_points(*view[0]);
+			enemy.distance_sensor(*view[0], pt11);
+			enemy.find_target(pt11);
+			enemy.distance_sensor(*view[0], pt11);
+			enemy.highlight_view(*view[0], pt11);
+			*/
 			if (AI_enemy == 1)		//REF1-3 Enable collision detection, target detection, and 8 sides distance sensor, run AI.
 			{
 				//enemy.NeuroLearn(pw_l_o, pw_r_o, laser, trial_number);
@@ -314,6 +317,7 @@ int main()
 			else
 			{
 				//enemy.manual_set(pw_l_o, pw_r_o, pw_laser_o, laser_o);
+				//enemy.attack(pw_l_o, pw_r_o, pw_laser_o, laser_o);
 			}
 
 			view[0]->set_processing(3);	//Without this, we would see a thresholded greyscale image of rgb, this brings the original image back.
@@ -325,7 +329,8 @@ int main()
 			}
 
 			////pt11.m_runNet(pw_l, pw_r, laser);		//Also not used, results inconsistent
-
+			//view[0]->set_processing(12);			//Set and Prep for original copy
+			//view[0]->processing();				//Make a copy of the rgb image
 			/*
 			view[0]->set_processing(0);			//Set and Prep for original copy
 			view[0]->processing();				//Make a copy of the rgb image
