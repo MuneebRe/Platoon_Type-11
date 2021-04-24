@@ -123,7 +123,7 @@ int main()
 	while (1)
 	{
 	static int trial_number = 0;
-	cout << "Trial Number " << trial_number << " begin!" << endl;
+	//cout << "Trial Number " << trial_number << " begin!" << endl;
 	// set robot initial position (pixels) and angle (rad)
 	x0 = 470;
 	y0 = 300;
@@ -194,8 +194,8 @@ int main()
 	PT11 pt11;		//Make instance of robot (sim)
 	PT11 enemy;		//Make instance of enemy
 
-	if (AI_player == 1) pt11.init_neural();		//REF1-2 Load latest weight data, then randomize it (either relative to best one or fully random)
-	if(AI_enemy == 1) enemy.init_neural();
+	//if (AI_player == 1) pt11.init_neural();		//REF1-2 Load latest weight data, then randomize it (either relative to best one or fully random)
+	//if(AI_enemy == 1) enemy.init_neural();
 
 	//runNet();	//Neural Network copied off online and edited for my use,
 				//But it requires specific training data so it's no good, deals with conflict in order.
@@ -272,20 +272,27 @@ int main()
 			//pt11.label_enemy(view[0], enemy);
 
 			pt11.collision_points(*view[0]);	//Move view[0] object into pt11 function
-			//pt11.find_target(enemy);
-			pt11.distance_sensor(*view[0], enemy);
+			
+			if(pt11.collision_reset == 0){
+
 			pt11.find_target(enemy);
+			
+			}
+
+			pt11.distance_sensor(*view[0], enemy);
+			//pt11.find_target(enemy);
 			//pt11.highlight_view(*view[0], enemy);
 
 			if (AI_player == 1)
 			{
-				pt11.NeuroLearn(pw_l, pw_r, laser, trial_number);
+				//pt11.NeuroLearn(pw_l, pw_r, laser, trial_number);
 			}
 			else if (AI_player == 0)
 			{
-				pt11.manual_set(pw_l, pw_r, pw_laser, laser);		//Control the bot. A W D for laser, arrows for bot
+				//pt11.manual_set(pw_l, pw_r, pw_laser, laser);		//Control the bot. A W D for laser, arrows for bot
 				//pt11.scout(pw_l, pw_r, pw_laser, laser);
 				//pt11.attack(pw_l, pw_r, pw_laser, laser);
+				pt11.flee(pw_l, pw_r, pw_laser,laser, tc0);
 			}
 
 			//enemy.collision_points(*view[0]);
@@ -301,6 +308,7 @@ int main()
 				//enemy.manual_set(pw_l_o, pw_r_o, pw_laser_o, laser_o);
 			}
 
+			//view[0]->acquire(); // Print RGB Image to screen
 
 			for (int i = 0; i < 4; i++)
 			{

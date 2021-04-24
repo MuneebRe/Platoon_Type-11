@@ -16,6 +16,7 @@ public:
 	double collision_t2[4];
 	double collision_dt[4];
 	double collision_dt_target[4];
+	bool collision_reset;
 
 	bool net_mem[7];
 	double net_out[3];
@@ -78,6 +79,7 @@ public:
 	void NeuroLearn(int& pw_l, int& pw_r, int& laser, int &trial_number);
 
 	void scout(int& pw_l, int& pw_r, int& pw_laser, int& laser);
+	void flee(int& pw_l, int& pw_r, int& pw_laser, int& laser, int tc0);
 	void attack(int& pw_l, int& pw_r, int& pw_laser, int& laser);
 
 	void highlight_view(Camera& view, PT11 enemy);

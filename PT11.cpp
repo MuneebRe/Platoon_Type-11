@@ -58,6 +58,8 @@ PT11::PT11()
 	collision_dt_target[2] = 1.00;
 	collision_dt_target[3] = 0.90;
 
+	collision_reset = 0; //Initializing the reset
+
 	for (int i = 0; i < 8; i++)
 	{
 		distance_log[i] = 0;
@@ -141,10 +143,15 @@ void PT11::collision_points(Camera &view)
 	//[0] Front - [1] right - [2] back - [3] left
 	//Basically, there are dots on all sides of the car to detect collision.
 	//I had to comment out draw_point_rgb because it messes up with check_collision( )
-
+	/*
 	Lx[0] = 31;		Ly[0] = 0;		LL[0] = 20;		Ln[0] = 4;
 	Lx[1] = -42;	Ly[1] = -34;	LL[1] = 40;		Ln[1] = 4;
 	Lx[2] = -112;	Ly[2] = 0;		LL[2] = 20;		Ln[2] = 4;
+	Lx[3] = Lx[1];	Ly[3] = -Ly[1];	LL[3] = LL[1];	Ln[3] = Ln[1];
+*/
+	Lx[0] = 40;		Ly[0] = 0;		LL[0] = 20;		Ln[0] = 6;
+	Lx[1] = -42;	Ly[1] = -60;	LL[1] = 20;		Ln[1] = 8;
+	Lx[2] = -130;	Ly[2] = 0;		LL[2] = 20;		Ln[2] = 6;
 	Lx[3] = Lx[1];	Ly[3] = -Ly[1];	LL[3] = LL[1];	Ln[3] = Ln[1];
 
 	for (int i = 0; i < 4; i++)
@@ -913,6 +920,190 @@ void PT11::scout(int& pw_l, int& pw_r, int& pw_laser, int& laser)
 		break;
 	}
 	
+}
+
+void PT11::flee(int& pw_l, int& pw_r, int& pw_laser, int& laser, int tc0)
+{
+	
+	double timer_count;
+	static bool turn_right = 0;
+	static bool turn_left = 0;
+	double theta_pt11;
+	static double collision_angle = 0;
+	//Task for Alex :)
+	//Control the robot so it avoids obstacles initially.
+	//Combine with Gurv to hide
+	//Using only those variables:
+
+	//Distance sensor:
+	//distance_log[0]	Front distance sensor
+	//distance_log[1]	Front Right distance sensor
+	//distance_log[2]	Right side distance sensor
+	//distance_log[3]	Back right distance sensor
+	//distance_log[4]	Back distance sensor
+	//distance_log[5]	Back left distance sensor
+	//distance_log[6]	Left distance sensor
+	//distance_log[7]	Forward left distance sensor
+	//Note: The values stored in those is under Ln[...], check void PT11::distance_sensor.
+	//Basically, if Ln[0] were 100, my robot is draw 100 points on a straight line
+	//If the white pixel of an obstacle was found in point 60, then ditance_log[0] would return 60.
+
+	//Collision sensor:
+	//collision_state[0]	Front collision
+	//collision_state[1]	Right collision
+	//collision_state[2]	Back collision
+	//collision_state[3]	Left collision
+	//Value is either 0 or 1.
+
+	//target_state		Will return 1 if the front distance sensor is directly looking at the enemy
+	//					Will return 0 if enemy hiding behind obstacle, or just looking at obstacle
+	//state_dir[0]		Will return 1 if the enemy is counter clockwise from your theta
+	//state_dir[1]		Will return 0 if enemy is clockwise from your theta
+
+	//In order to know if those values make sense, use cout << [thing of interest] << "  " << [other thing] << ...  << endl;
+	//To use this whole function, make sure that AI_player = 0 in program.cpp, and that pt11.scout(pw_l, pw_r, pw_laser, laser);
+	//is commented out, while commenting pt11.manual_set(pw_l, pw_r, pw_laser, laser);
+
+	int action = 4;
+	//cout << 'Forward' << endl;
+	
+	if (state_dir[0] == 1) action = 0;
+	if (state_dir[1] == 1) action = 1;
+	//if (target_state == 1) action = 2;
+	
+	int u[2];
+
+	u[0] = 0;
+	u[1] = 0;
+	
+	calculate_theta(get_x1(), get_y1(), get_x2(), get_y2(), theta_pt11);
+	
+	if ((collision_state[0] == 0 && collision_state[3] == 0 && collision_state[1] == 0 && collision_reset == 0) || (collision_state[2] == 1)) { //Front
+
+		if (KEY(VK_UP)) u[0] = 500;
+		//action = 2;
+		//action = 4;
+		if (target_state == 1) action = 2;
+
+	}
+	
+	if(collision_state[0] == 1){ //Front collision
+		
+		if (distance_log[1] > distance_log[7]) {
+
+			turn_right = 1;
+			turn_left = 0;
+		}
+		
+		if (distance_log[1] < distance_log[7]) {
+
+			turn_left = 1;
+			turn_right = 0;
+		}
+		
+		action = 3;
+		collision_angle = theta_pt11;
+		collision_reset = 1;
+	}
+	
+	
+	if ( turn_right == 1 && collision_reset == 1)
+	{
+		if (theta_pt11 >= 3.14)
+		{
+		action = 1;
+		}
+		
+		//collision_reset = 0;
+	}
+	
+	
+	/*
+	if (turn_right == 1 && action == 1)
+	{
+		action = 2;
+		collision_reset = 0;
+	}
+	
+	if (turn_left == 1 && action == 4)
+	{
+		action = 0;
+		collision_reset = 0;
+	}
+	if (turn_left == 1 && action == 0)
+	{
+		action = 2;
+		collision_reset = 0;
+	}
+
+	
+	if (collision_state[2] != 0 ) { //Rear
+
+		if (KEY(VK_DOWN)) u[0] = -500;
+		//action = 3;
+		action = 4;
+
+	}
+	if (collision_state[1] != 0) { //Left
+
+		if (KEY(VK_LEFT)) u[1] = 450;
+		//action = 2;
+		action = 4;
+
+	}
+	if (collision_state[3] != 0) { // Right
+
+		if (KEY(VK_RIGHT)) u[1] = -450;
+		//action = 0;
+		action = 4;
+
+	}
+	*/
+	//if (KEY(VK_UP)) u[0] = 500;
+	//if (KEY(VK_DOWN)) u[0] = -500;
+	//if (KEY(VK_RIGHT)) u[1] = -450;
+	//if (KEY(VK_LEFT)) u[1] = 450;
+
+	this->pw_l = 1500 + u[1] - u[0];
+	this->pw_r = 1500 + u[1] + u[0];
+
+	pw_r = this->pw_r;
+	pw_l = this->pw_l;
+	laser = 0;
+
+	//cout << "Front Collision: " << collision_state[0] << "\t" << "Rear Collision: " << collision_state[2] << "\t" << "Left Collision: " << collision_state[3] << "\t" << "Right Collision: " << collision_state[1] << endl;
+	//cout << "Front Distance: " << distance_log[0] << "\tRight Front Distance: " << distance_log[1] << "\tLeft Front Distance: " << distance_log[7] << endl;
+	//cout << "Clockwise from theta: " << state_dir[1] << "\t" << "Counter Clockwise from theta: " << state_dir[0] << endl;
+	//cout << "Action: " << action << endl;
+	//cout << "Turn Left: " << turn_left << " " << "Turn Right: " << turn_right << endl;
+	cout << theta_pt11 << endl;
+	timer_count = high_resolution_time() - tc0;
+	//cout << timer_count << endl;
+	
+	switch (action)
+	{
+	case 0:
+		pw_l = 2000; //Left
+		pw_r = 2000;
+		break;
+	case 1:
+		pw_l = 1000; // Right
+		pw_r = 1000;
+		break;
+	case 2:
+		pw_l = 1000; // Straight
+		pw_r = 2000;
+		break;
+	case 3:
+		pw_l = 2000; // Reverse
+		pw_r = 1000;
+		break;
+	case 4:
+		pw_l = 1500; // Brake
+		pw_r = 1500;
+		break;
+	}
+
 }
 
 void PT11::attack(int& pw_l, int& pw_r, int& pw_laser, int& laser)
