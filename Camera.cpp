@@ -127,7 +127,7 @@ void Camera::processing()
 		break;
 	case 3:
 		copy(original, rgb);
-		draw_point_rgb(rgb, ic, jc, 0, 255, 0);
+		//draw_point_rgb(rgb, ic, jc, 0, 255, 0);
 		break;
 	case 4: //Our robot's center of rotation finder
 		copy(original, rgb);
