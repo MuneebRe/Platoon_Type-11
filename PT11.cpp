@@ -608,41 +608,60 @@ void PT11::calculate_theta(double x1, double y1, double x2, double y2, double &t
 	//cout << x1 << "\t" << y1 << "\t" << theta << endl;
 }
 
+void PT11::theta_target_delta_fix(double theta_target, double& target_delta, int& aim_dir)
+{
+	target_delta = theta_target - theta;
+
+	if (target_delta < 0) target_delta = theta_target - theta + 2 * M_PI;
+
+	double value1, value2;
+	value1 = target_delta;
+	value2 = 2 * M_PI - target_delta;
+
+	if (value1 < value2)
+	{
+		target_delta = value1;
+		aim_dir = -1;
+	}
+	if (value1 > value2)
+	{
+		target_delta = value2;
+		aim_dir = 1;
+	}
+}
+
 void PT11::find_target(PT11 enemy)
 {
 	calculate_theta(enemy.get_x1(), enemy.get_y1(), x1, y1, theta_target1);
-	calculate_theta(enemy.get_x2(), enemy.get_y2(), x1, y1, theta_target2);
+	//calculate_theta(enemy.get_x2(), enemy.get_y2(), x1, y1, theta_target2);
 	//cout << theta_target1 << endl;
 
-	target_delta1 = theta_target1 - theta;
-	target_delta2 = theta_target2 - theta;
-	//cout << target_delta1 << "\t" << target_delta2 << endl;
+	int aim_dir;
 
-	//trigger_range = 0.05;
+	//cout << theta_target1 << "   ";
+
+	theta_target_delta_fix(theta_target1, target_delta1, aim_dir);
+
+	//cout << target_delta1 << "    " << aim_dir << endl;
 	
-	/*
-	if (abs(target_delta1) < trigger_range || abs(target_delta2) < trigger_range){
-		target_state = 1;
+	if (aim_dir == 1)
+	{
+		state_dir[0] = 0;
+		state_dir[1] = 1;
 	}
-	else {
-		target_state = 0;
-	}
-	*/
-	if (target_delta1 >= 0) { state_dir[0] = 1; }
-	else if (target_delta1 < 0) {state_dir[1] = 1; }
-
-	if (state_dir[0] == 1 && state_dir[1] == 1)
+	else if (aim_dir == -1)
 	{
 		state_dir[0] = 1;
 		state_dir[1] = 0;
 	}
 
-	if (target_state == 1) {
+	if (target_state == 1)
+	{
 		state_dir[0] = 0;
 		state_dir[1] = 0;
 	}
 
-	//cout << target_state << "\t" << state_dir[0] << "\t" << state_dir[1] << endl;
+	//cout << state_dir[0] << "    " << state_dir[1] << endl;
 }
 
 void PT11::m_runNet(int& pw_l, int& pw_r, int& laser)
@@ -917,22 +936,48 @@ void PT11::scout(int& pw_l, int& pw_r, int& pw_laser, int& laser)
 
 void PT11::attack(int& pw_l, int& pw_r, int& pw_laser, int& laser)
 {
-	for (int i = 0; i < 8; i++)
-	{
-		cout << "  dis-" << i << ": " << distance_log[i];
-		if (i == 7) cout << endl;
-	}
+	int u[2];
 
-	int action = 3;
+	u[0] = 0;
+	u[1] = 0;
+
+	int action = 5;
+	double theta_delta;
+	int aim_dir;
+
+	theta_target_delta_fix(VFF_theta, theta_delta, aim_dir);
 
 	
+	if (aim_dir == -1)
+	{
+		u[1] = 450;
+	}
+	else if (aim_dir == 1)
+	{
+		u[1] = -450;
+	}
+	
+	if (theta_delta < 0.15) u[0] = 500;
 
-	//if (distance_log[0] < 10 && state_dir[0] == 1) action = 0;
-	//if (state_dir[0] == 1) action = 0;
-	//if (state_dir[1] == 1)  action = 1;
-	//if (target_state == 1 && distance_log[0] > 10) action = 2;
-	//if (state_dir[0] == 1 && (distance_log[0] < 10 || distance_log[7] < 10)) action = 2;
+	if (VFF_mag < 2000) u[0] = 500;
 
+	//if (collision_state[2] == 1) action = 2;
+
+	cout << VFF_theta << "   " << VFF_mag << endl;
+
+	//cout << theta_delta << endl;
+
+
+	this->pw_l = 1500 + u[1] - u[0];
+	this->pw_r = 1500 + u[1] + u[0];
+
+	//cout << this->pw_l << "\t" << this->pw_r << endl;
+
+	pw_r = this->pw_r;
+	pw_l = this->pw_l;
+	laser = 0;
+
+	/*
 	switch (action)
 	{
 	case 0:					//Turn left
@@ -948,38 +993,61 @@ void PT11::attack(int& pw_l, int& pw_r, int& pw_laser, int& laser)
 		pw_r = 2000;
 		break;
 	}
-	
+	*/
 }
 
 void PT11::highlight_view(Camera& view, PT11 enemy)
 {
+	bool flag_draw = 1;
 	int radar_radius = 0;
 	double theta_index = 0;
 	double theta_jump = 0.1;
 	int radar_minimum = 50;
-	int radius_jump = 10;
-	int radius_limit = 300;
-	int vector_x = 0;
-	int vector_y = 0;
+	int radius_jump = 5;
+	int radius_limit;
+	double vector_x = 0;
+	double vector_y = 0;
+	double counter_vector_x = 0;
+	double counter_vector_y = 0;
 	bool enemy_trigger = 0;
+	double multiplier;
+	double enemy_multiplier;
 
 	while (theta_index < (2 * M_PI))
 	{
+		radius_limit = 250;
+		multiplier = 1;
+		enemy_multiplier = 1.0;
 		bool enemy_trigger = 0;
 		theta_index = theta_index + theta_jump;
 
-		//if (theta_index < theta + 1.0 && theta_index > theta - 1.0) continue;
+		double sym_offset;
+		double sym_size;
+		double sym_radius;
+		double sym_multi;
 
 		/*
-		if (theta_index < theta + 1.0 && theta_index > theta - 1.0)
-		{
-			radius_limit = 300;
-		}
-		else
-		{
-			radius_limit = 100;
-		}
+		
+		double temp = 0.5;
+		sym_offset = M_PI/2 + temp /2.0;
+		sym_size = temp;
+		sym_radius = 70;
+		sym_multi = 1.0;
+		VFF_section_modifier(theta_index, sym_offset, sym_size, radius_limit, sym_radius, multiplier, sym_multi);
+		VFF_section_modifier(theta_index, 2*M_PI - sym_offset, sym_size, radius_limit, sym_radius, multiplier, sym_multi);
+		
+		
+		sym_offset = M_PI;
+		sym_size = 0.5;
+		sym_radius = 130;
+		sym_multi = 1.0;
+		VFF_section_modifier(theta_index, sym_offset, sym_size, radius_limit, sym_radius, multiplier, sym_multi);
+		//VFF_section_modifier(theta_index, 2 * M_PI - sym_offset, sym_size, radius_limit, sym_radius, multiplier, sym_multi);
 		*/
+
+		double theta_bracket_1 = theta + 0 + M_PI + 1.0;
+		double theta_bracket_2 = theta + 0 + M_PI - 1.0;
+
 		radar_radius = 0;
 		int* arrx = new int[radius_limit];		//Dynamic memory, can change number of points interested in using
 		int* arry = new int[radius_limit];		//Kinda like resolution. More points can make it a line
@@ -995,9 +1063,7 @@ void PT11::highlight_view(Camera& view, PT11 enemy)
 
 		hide_shadows(arrx, arry, view, theta_index, radar_radius, radius_limit, enemy_trigger, enemy, radius_jump);
 		//cout << radar_radius << endl;
-		
-		vector_x += radar_radius * cos(theta_index);
-		vector_y += radar_radius * sin(theta_index);
+
 
 		for (int radius = radar_minimum; radius < radar_radius; radius+=radius_jump)
 		{
@@ -1005,26 +1071,41 @@ void PT11::highlight_view(Camera& view, PT11 enemy)
 			{
 				break;
 			}
-			draw_point_rgb(view.return_image(), arrx[radius], arry[radius], 255, 0, 0);
+			if (flag_draw == 1) draw_point_rgb(view.return_image(), arrx[radius], arry[radius], 255, 0, 0);
 
 			if (enemy_trigger == 1)
 			{
-				draw_point_rgb(view.return_image(), arrx[radius], arry[radius], 0, 255, 255);
-				//enemy_trigger = 0;
+				multiplier = enemy_multiplier;
+				if (flag_draw == 1) draw_point_rgb(view.return_image(), arrx[radius], arry[radius], 0, 255, 255);
 			}
 		}
+
+		vector_x += radar_radius * cos(theta_index) * multiplier;
+		vector_y += radar_radius * sin(theta_index) * multiplier;
+
+		counter_vector_x += radius_limit * cos(theta_index) * multiplier;
+		counter_vector_y += radius_limit * sin(theta_index) * multiplier;
 
 		delete[]arrx;
 		delete[]arry;
 	}
 
-	cout << vector_x << "  " << vector_y << endl;
+	//cout << vector_x << "  " << vector_y << endl;
+
+	counter_vector_x = -counter_vector_x;
+	counter_vector_y = -counter_vector_y;
+
+	vector_x += counter_vector_x;
+	vector_y += counter_vector_y;
 
 	double resultant_theta;
 	double resultant_mag = sqrt(pow((vector_x), 2) + pow((vector_y), 2));
 
 	calculate_theta(vector_x, vector_y, 0, 0, resultant_theta);
 	//cout << resultant_theta << endl;
+
+	VFF_theta = resultant_theta;
+	VFF_mag = resultant_mag;
 
 	int x_draw, y_draw;
 	for (int radius = radar_minimum; radius < resultant_mag; radius += radius_jump)
@@ -1037,9 +1118,42 @@ void PT11::highlight_view(Camera& view, PT11 enemy)
 			break;
 		}
 
-		draw_point_rgb(view.return_image(), x_draw, y_draw, 0, 255, 0);
+		if (flag_draw == 1) draw_point_rgb(view.return_image(), x_draw, y_draw, 0, 255, 0);
 	}
 }
+
+
+void PT11::VFF_section_modifier(double theta_index, double offset, double range, int& radius_limit, int limit_val, double& multiplier, double multiplier_val)
+{
+
+	double theta_bracket_1 = theta + offset + range;
+	double theta_bracket_2 = theta + offset - range;
+
+	while (theta_bracket_1 > 2 * M_PI)
+	{
+		theta_bracket_1 -= 2 * M_PI;
+	}
+
+	while (theta_bracket_2 > 2 * M_PI)
+	{
+		theta_bracket_2 -= 2 * M_PI;
+	}
+
+	if (theta_bracket_1 < theta_bracket_2)
+	{
+		theta_bracket_1 = theta_bracket_1 + 2 * M_PI;
+
+	}
+
+	//cout << theta << "    " << theta_bracket_1 << "   " << theta_bracket_2 << endl;
+	if (theta_index + 2 * M_PI < theta_bracket_1 && theta_index + 2 * M_PI > theta_bracket_2 ||
+		theta_index < theta_bracket_1 && theta_index > theta_bracket_2)
+	{
+		radius_limit = limit_val;
+		multiplier = multiplier_val;
+	}
+}
+
 
 void PT11::hide_shadows(int arrx[], int arry[], Camera& view, double theta_index, int& radar_radius, int radius_limit, bool& enemy_trigger, PT11 enemy, int radius_jump)
 {

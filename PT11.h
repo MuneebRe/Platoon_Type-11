@@ -51,6 +51,9 @@ private:
 	Neural_Net* topology;
 	double trial_timer1, trial_timer2, trial_dt;
 
+	double VFF_theta;
+	double VFF_mag;
+
 public:
 	PT11();
 	void init_neural();
@@ -65,6 +68,7 @@ public:
 	double get_x2() { return x2; }
 	double get_y2() { return y2; }
 	void calculate_theta(double x1, double y1, double x2, double y2, double &theta);
+	void theta_target_delta_fix(double target_theta,double& target_delta, int& aim_dir);
 	bool get_reset_state() { return flag_reset; }
 
 	void distance_sensor(Camera& view, PT11 enemy);
@@ -82,6 +86,7 @@ public:
 
 	void highlight_view(Camera& view, PT11 enemy);
 	void hide_shadows(int arrx[], int arry[], Camera& view, double theta_index, int& radar_radius, int radius_limit, bool& enemy_trigger, PT11 enemy, int radius_jump);
+	void VFF_section_modifier(double theta_index, double offset, double range, int& radius_limit, int limit_val, double& multiplier, double multiplier_val);
 
 	~PT11();
 };
