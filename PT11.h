@@ -26,6 +26,9 @@ public:
 
 
 private:
+	image radar_label, radar_rgb, radar_greyscale;	//Radar-Evasion
+	i2byte radar_nlabel;		//Radar-Evasion
+	int radar_nlabels, radar_robot_objects[5]; //Radar-Evasion: radar_robot_objects array will hold object labels for radar detection filtering
 	double x1,x2, dx, ddx;
 	double y1,y2, dy, ddy;
 	double theta, dtheta, ddtheta;
@@ -53,7 +56,7 @@ private:
 	double trial_timer1, trial_timer2, trial_dt;
 
 public:
-	PT11();
+	PT11(Camera& view);
 	void init_neural();
 	void manual_set(int& pw_l, int& pw_r, int& pw_laser, int& laser);
 	void set_coord(double x1, double y1, double x2, double y2);
@@ -61,10 +64,10 @@ public:
 	void check_collision(int arrx[], int arry[], Camera &view, int i);
 	double get_theta() { return theta; }
 	void find_target(PT11 enemy);
-	double get_x1() { return x1; }
-	double get_y1() { return y1; }
-	double get_x2() { return x2; }
-	double get_y2() { return y2; }
+	double get_x1() { return x1; }	//Centroid of front robot circle
+	double get_y1() { return y1; }	//Centroid of front robot circle
+	double get_x2() { return x2; }	//Centroid of back robot circle
+	double get_y2() { return y2; }	//Centroid of back robot circle
 	void calculate_theta(double x1, double y1, double x2, double y2, double &theta);
 	bool get_reset_state() { return flag_reset; }
 
@@ -72,7 +75,7 @@ public:
 	void distance_input(int arrx[], int arry[], Camera& view, int i);
 	void is_obstacle_before_enemy(int arrx[], int arry[], PT11 enemy, Camera& view);
 	void label_enemy(Camera& view, PT11 enemy);
-	void fill_wheel_void(Camera& view);
+	void fill_wheel_void(Camera& view);	//Combines front wheel objects with front circle object into one object
 
 	void m_runNet(int& pw_l, int& pw_r, int& laser);
 	//void NeuroNet(int pw_l, int pw_r);
@@ -84,6 +87,12 @@ public:
 
 	void highlight_view(Camera& view, PT11 enemy);
 	void hide_shadows(int arrx[], int arry[], Camera& view, double theta_index, int& radar_radius, int radius_limit, bool& enemy_trigger, PT11 enemy, int radius_jump);
+
+	void acquire_camera_image(Camera& view);   //Radar-Evasion: Assigns rgb, greyscale and label image to their respect PT11 objects for processing.
+	void get_safe_zone(Camera& view, PT11 enemy, int pt_i[4], int pt_j[4]);			//Radar-Evasion: Compiles all pixels into "vision" lines expanding from robot centroid for Radar processing
+	void draw_safe_zone(int* line_array_i, int* line_array_j, int size, Camera& view, PT11 enemy);		//Radar-Evasion: Radar processing function to determine safe zones and store inro rgb image for masking purposes
+	//Might remove identify_radar_objects() function! 
+	void identify_radar_objects(int pt_i[4], int pt_j[4], Camera& view); //Radar-Evasion: Radar processing function to distinguish between obstacles and robots - necessary for draw_safe_zone
 
 	~PT11();
 };

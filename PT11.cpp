@@ -32,7 +32,7 @@ using namespace std;
 #include "Neural_Network/Output.h"
 
 
-PT11::PT11()
+PT11::PT11(Camera& view)
 {
 	pw_l = 1500;
 	pw_r = 1500;
@@ -71,6 +71,22 @@ PT11::PT11()
 
 	label_nb_1 = 0;
 	label_nb_2 = 0;
+
+	radar_rgb.width = 640;
+	radar_rgb.height = 480;
+	radar_rgb.type = RGB_IMAGE;
+
+	radar_greyscale.type = GREY_IMAGE;
+	radar_greyscale.width = 640;
+	radar_greyscale.height = 480;
+
+	radar_label.type = LABEL_IMAGE;
+	radar_label.width = 640;
+	radar_label.height = 480;
+
+	allocate_image(radar_rgb);
+	allocate_image(radar_greyscale);
+	allocate_image(radar_label);
 
 }
 
@@ -127,9 +143,9 @@ void PT11::manual_set(int& pw_l, int& pw_r, int& pw_laser, int& laser)
 
 void PT11::set_coord(double x1, double y1, double x2, double y2)
 {
-	this->x1 = x1;
+	this->x1 = x1;	//Front circle
 	this->y1 = y1;
-	this->x2 = x2;
+	this->x2 = x2;	//Back circle
 	this->y2 = y2;
 
 	calculate_theta(x1, y1, x2, y2, theta);
@@ -1304,6 +1320,386 @@ void PT11::label_enemy(Camera& view, PT11 enemy)
 {
 	
 }
+
+
+void PT11::acquire_camera_image(Camera& view) {
+	//Initializes all PT11 image objects. These image objects are used for processing
+
+	copy(view.return_image(), radar_rgb);		//This will house an RGB image with the mask that will be used for processing of safe zones
+
+												//***NOTE2: CURRENTLY THIS FUNCTION IS ONLY GRABBING THRESHOLDED IMAGE after calling case 1 in main, placement of this function in main is important
+
+	copy(view.return_a(), radar_greyscale);		//Storing image "a" which is a binary thresholded image (I placed it in main like that)
+
+
+	label_image(radar_greyscale, radar_label, radar_nlabels);		//labels objects, now each robot will have a label number (This might be redundant, might use 'label' label image from Camera)
+																	//Because I use the label numbers associated with 'label' from class Camera
+
+}
+
+
+void PT11::identify_radar_objects(int pt_i[4], int pt_j[4], Camera& view) {
+	//REDUNDANT, REMOVE??
+
+	//Identify stationary objects, only the labels with stationary objects will be important and create safe zone
+	/*double x00, y00, x01, y01, x10, y10, x11, y11; //Centroids of the robots
+	double x0, y0, x1, y1;	//Point location of front wheels
+	double slope, m;
+	double theta1;
+	x00 = pt_i[2];	//Friendly front circle
+	y00 = pt_j[2];
+	x01 = pt_i[0];	//Friendly back circle
+	y01 = pt_j[0];
+	x10 = pt_i[1];	//Enemy front circle
+	y10 = pt_j[1];
+	x11 = pt_i[3];	//Enemy back circle
+	y11 = pt_j[3];
+
+	slope = (y00 - y01) / (x00 - x01);
+	m = -1 / slope;
+
+	x0 = x00 + sqrt((pow(36, 2) / (1 + (1 / (pow(m, 2))))));
+	x1 = x00 - sqrt((pow(36, 2) / (1 + (1 / (pow(m, 2))))));
+	y0 = int(y00 + (m * (x0 - x00)));
+	y1 = int(y00 + (m * (x1 - x00)));
+
+
+	//x = x10 + (-42 + (40 * 4) / 2.0 - 40 / 2.0 - 1 * 40) * cos(theta1) - (-34) * sin(theta1);
+	//y = y10 + (-42 + (40 * 4) / 2.0 - 40 / 2.0 - 1 * 40) * sin(theta1) + (-34) * cos(theta1);
+	draw_point_rgb(view.return_image(), x0, y0, 255, 255, 0);
+	draw_point_rgb(view.return_image(), x1, y1, 255, 255, 0);
+	*/
+
+
+
+}
+
+void PT11::draw_safe_zone(int* line_array_i, int* line_array_j, int size, Camera& view, PT11 enemy) {
+	//old method stored
+	/* OLD method - updated april 23
+	ibyte *p_greyscale, *p_rgb, R, G, B;	//This will iterate through the binary image, perform logic to understand which pixels should be considered green. RGB will be used in view->return_image()
+	int i, j, x, y, k, size1;
+	int flag1 = 0;		//Triggers when white pixel is seen, this means following black pixels are safe zones
+	//int flag2 = 0;		//Triggers when safe zone starts, this indicates new white pixel has been observed along line, which is not a safe zone because we can't enter white pixel areas (obstacle)
+	size1 = size;
+
+	p_greyscale = radar_greyscale.pdata;	//Points to binary image
+	p_rgb = view.return_image().pdata;		//Points to LIVE rgb image
+
+	for (i = 70; i < size1; i++) {
+		x = line_array_i[i];		//x-coordinate of pixel
+		y = line_array_j[i];		//y-coordinate of pixel
+
+		k = x + (y * 640);		//k-coordinate of pixel NOTE: I would use view.width instead of 640 BUT its sussy... just gonna put 640 LOL
+
+		if (p_greyscale[k] < 50) { //detecting a black pixel
+			if (flag1 == 1) {
+				//This will only trigger for the first black pixel observed after white pixels ie: white pixels have been detected earlier in the line, safe zone!
+				p_rgb[(k*3)] = 50; //B
+				p_rgb[(k*3) + 1] = 205; //G
+				p_rgb[(k*3) + 2] = 50; //R
+				//flag2 = 1;		//black pixels have been observed, so next time white pixels appear = stop safe zone (not necessary, safe zone is only written for black pixels, and white object is covering those black pixels anyways)
+			}
+		}
+
+		if (p_greyscale[k] > 240) {
+			flag1 = 1;			//white pixels have been detected, so next time black pixels appear = safe zone
+		}
+
+	}
+	*/
+	//This function performs the radar processing of determining the safe zones. It creates an RGB mask of the safe zone which can be used in other processing functions. 
+
+
+	ibyte* p_greyscale, * p_rgb, R, G, B;	//This will iterate through the binary image, perform logic to understand which pixels should be considered green. RGB will be used in view->return_image()
+	i2byte* p_label;
+	int i, j, x, y, k, size1;
+	int flag1 = 0;		//Triggers when white pixel is seen, this means following black pixels are safe zones
+	//int flag2 = 0;		//Triggers when safe zone starts, this indicates new white pixel has been observed along line, which is not a safe zone because we can't enter white pixel areas (obstacle)
+	size1 = size;
+
+	p_greyscale = radar_greyscale.pdata;	//Points to binary image
+	//p_rgb = view.return_image().pdata;		//Points to LIVE rgb image UPDATE: Make it point to radar rgb image to create mask
+	p_label = (i2byte*)view.return_label().pdata;	//Points to label image from camera class, since label_nb_1 and label_nb_2 are labels from this image
+	p_rgb = radar_rgb.pdata;					//Mask is created on radar_rgb, holding C will copy the mask to the viewable "rgb" image in Camera class (written in at the end of get_safe_zone()
+
+
+	for (i = 70; i < size1; i++) {
+		x = line_array_i[i];		//x-coordinate of pixel 
+		y = line_array_j[i];		//y-coordinate of pixel
+
+		k = x + (y * 640);		//k-coordinate of pixel NOTE: I would use view.width instead of 640 BUT its sussy... just gonna put 640 LOL
+
+		if (p_greyscale[k] < 50) { //detecting a black pixel in the line equation indicating an object
+			if (flag1 == 1) {
+				//Processing will only trigger for the first black pixel observed after white pixels ie: white pixels have been detected earlier in the line, triggering flag1, safe zone!
+				p_rgb[(k * 3)] = 50; //B
+				p_rgb[(k * 3) + 1] = 205; //G
+				p_rgb[(k * 3) + 2] = 50; //R
+				//flag2 = 1;		//black pixels have been observed, so next time white pixels appear = stop safe zone (not necessary, safe zone is only written for black pixels, and white object is covering those black pixels anyways)
+			}
+		}
+
+		if (p_greyscale[k] > 240) {
+			if (p_label[k] != label_nb_1 && p_label[k] != label_nb_2 && p_label[k] != enemy.label_nb_1 && p_label[k] != enemy.label_nb_2) {
+				flag1 = 1;			//white pixels have been detected (ie: an object is observed), next time black pixels appear = safe zone (ie: the location after the object)
+			}
+		}
+	}
+}
+
+void PT11::get_safe_zone(Camera& view, PT11 enemy, int pt_i[4], int pt_j[4]) {
+	//This function creates lines that increment from the centroid of robot to the right/left wall, then top/bottom wall. Once the pixels are stored in the array, 
+	//we now have access to i,j value of every pixel in the image *organized from the centroid of the robot* to the walls. 
+	//This will let us process the safe zones and other process functions that are *robot-location sensitive*.
+
+	int i, j;		//Store the i and j pixel values of the radar
+	double x0, y0, x1, y1;		//Store centroid of robot and the final point of the radar sweep
+	double delta_x, delta_y;
+	double slope, b;
+	int height, width;		//Unnecessary if this becomes a class function, just use height and width class variable
+	int* line_array_i, * line_array_j;		//Store pixel coordinates in these dynamic arrays, delete at the end
+	int size;		//Stores size of dynamic array
+
+	int increment;		//Used to increment through dynamic arrays to print rgb points
+	double border_x, border_y;		//Used in greater for-loop controlling radar around borders
+								//These values are the final points of the radar line segment, they will change according to location of robot and required sweep
+
+	//identify_radar_objects(pt_i, pt_j, view);	//This process filters stationary objects from robot objects, REDUNDANT??? We already have the robot labels -> 	int label_nb_1; and int label_nb_2;
+
+	width = 640;
+	height = 480;
+	line_array_i = new int[1000];
+	line_array_j = new int[1000];
+	size = 0;
+
+	x0 = pt_i[2];		//centroids of enemy_robot (orange circle)
+	y0 = pt_j[2];
+
+	//x1 = 640;		Replaced by border_x, border_y
+	//y1 = y0 + 1;
+
+	//delta_x = x1 - x0;		These should adjust as lines change
+	//delta_y = y1 - y0;
+
+
+
+	for (border_y = 0; border_y < 480; border_y++) {
+		//Scanning through right-border, all lines from centroid to wall
+
+		border_x = 640;		//Initialize border_x for this sweep NOTE:(should be in a loop or something eventually, since border will change to 0 at some point)
+
+		if (border_y == y0) {
+			for (i = x0; i < border_x - 3; i++) {
+				//Iterate through all x-values for each line, LATER: account for vertical leaning lines
+				j = y0;
+
+				line_array_i[size] = i;
+				line_array_j[size] = j;
+
+				size++;
+			}
+		}
+		else {
+			delta_x = border_x - x0;
+			delta_y = border_y - y0;
+
+			slope = delta_y / delta_x;
+			b = y0 - (slope * x0);
+
+			for (i = x0; i < border_x - 3; i++) {
+				//Iterate through all x-values for each line, LATER: account for vertical leaning lines
+				j = int((slope * i) + b);
+
+				line_array_i[size] = i;
+				line_array_j[size] = j;
+
+				size++;
+			}
+		}
+
+		/* Commented out constant line drawing to start next step of programming
+		for (increment = 50; increment < size; increment++) {
+			//Draw result so we can see what's happening
+			int x, y;
+
+			x = line_array_i[increment];
+			y = line_array_j[increment];
+
+			draw_point_rgb(view.return_image(), x, y, 255, 0, 0);
+		}
+		*/
+
+		draw_safe_zone(line_array_i, line_array_j, size, view, enemy);		//SHOULD DRAW LIME GREEN SAFE ZONES :O
+
+		size = 0;		//Very important, reset array back to 0 element for next line
+
+		//I am adding line-drawing of left border in this for-loop because it uses the same y-range
+
+		border_x = 0;	//Left of screen
+
+		if (border_y == y0) {
+			for (i = x0; i > border_x; i -= 1) {
+				//Iterate through all x-values for each line (Lines start from centroid as if laser is shooting out)
+				j = y0;
+
+				line_array_i[size] = i;
+				line_array_j[size] = j;
+
+				size++;
+			}
+		}
+		else {
+
+			delta_x = border_x - x0;
+			delta_y = border_y - y0;
+
+			slope = delta_y / delta_x;
+			b = y0 - (slope * x0);
+
+			for (i = x0; i > border_x; i -= 1) {
+				//Iterate through all x-values for each line (Lines start from centroid as if laser is shooting out)
+				j = int((slope * i) + b);
+
+				line_array_i[size] = i;
+				line_array_j[size] = j;
+
+				size++;
+			}
+		}
+
+
+		/* Commented out constant line drawing to start next step of programming
+		for (increment = 50; increment < size; increment++) {
+			//Draw result so we can see what's happening
+			int x, y;
+
+			x = line_array_i[increment];
+			y = line_array_j[increment];
+
+			draw_point_rgb(view.return_image(), x, y, 0, 255, 0);
+		}
+		*/
+
+		draw_safe_zone(line_array_i, line_array_j, size, view, enemy);		//SHOULD DRAW LIME GREEN SAFE ZONES :O
+
+		size = 0;		//Very important, reset array back to 0 element for next line
+
+	}
+
+	for (border_x = 0; border_x < 640; border_x++) {
+		//Scanning through top-border, all lines from centroid to wall
+
+		border_y = 480;		//Initialize border_x for this sweep NOTE:(should be in a loop or something eventually, since border will change to 0 at some point)
+
+		if (border_x == x0) {
+			for (j = y0; j < border_y; j++) {
+				//Iterate through all x-values for each line, LATER: account for vertical leaning lines
+				i = x0;
+
+				line_array_i[size] = i;
+				line_array_j[size] = j;
+
+				size++;
+			}
+		}
+		else {
+			delta_x = border_x - x0;
+			delta_y = border_y - y0;
+
+			slope = delta_x / delta_y;
+			b = x0 - (slope * y0);
+
+			for (j = y0; j < border_y; j++) {
+				//Iterate through all x-values for each line, LATER: account for vertical leaning lines
+				i = int((slope * j) + b);
+
+				line_array_i[size] = i;
+				line_array_j[size] = j;
+
+				size++;
+			}
+		}
+
+
+		/*
+		for (increment = 50; increment < size; increment++) {
+			//Draw result so we can see what's happening
+			int x, y;
+
+			x = line_array_i[increment];
+			y = line_array_j[increment];
+
+			draw_point_rgb(view.return_image(), x, y, 0, 0, 255);
+		}
+		*/
+
+		draw_safe_zone(line_array_i, line_array_j, size, view, enemy);		//SHOULD DRAW LIME GREEN SAFE ZONES :O
+
+		size = 0;		//Very important, reset array back to 0 element for next line
+
+		//I am adding line-drawing of bottom border in this for-loop because it uses the same y-range
+
+		border_y = 0;		//Initialize border_x for this sweep NOTE:(should be in a loop or something eventually, since border will change to 0 at some point)
+
+		if (border_x == x0) {
+			for (j = y0; j > border_y; j -= 1) {
+				//Iterate through all x-values for each line, LATER: account for vertical leaning lines
+				i = x0;
+
+				line_array_i[size] = i;
+				line_array_j[size] = j;
+
+				size++;
+			}
+		}
+		else {
+
+			delta_x = border_x - x0;
+			delta_y = border_y - y0;
+
+			slope = delta_x / delta_y;
+			b = x0 - (slope * y0);
+
+			for (j = y0; j > border_y; j -= 1) {
+				//Iterate through all x-values for each line, LATER: account for vertical leaning lines
+				i = int((slope * j) + b);
+
+				line_array_i[size] = i;
+				line_array_j[size] = j;
+
+				size++;
+			}
+		}
+
+
+		/*
+		for (increment = 50; increment < size; increment++) {
+			//Draw result so we can see what's happening
+			int x, y;
+
+			x = line_array_i[increment];
+			y = line_array_j[increment];
+
+			draw_point_rgb(view.return_image(), x, y, 255, 255, 0);
+		}
+		*/
+
+		draw_safe_zone(line_array_i, line_array_j, size, view, enemy);		//SHOULD DRAW LIME GREEN SAFE ZONES :O
+
+		size = 0;		//Very important, reset array back to 0 element for next line
+
+	}
+
+	if (KEY('C')) {
+		copy(radar_rgb, view.return_image());
+	}
+
+	delete[] line_array_i;
+	delete[] line_array_j;
+}
+
+
 
 PT11::~PT11()
 {

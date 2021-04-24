@@ -191,8 +191,8 @@ int main()
 	static bool AI_player = 0;	//for player
 	static bool AI_enemy = 0;	//REF1-1 enemy will follow weight pattern as pt11
 
-	PT11 pt11;		//Make instance of robot (sim)
-	PT11 enemy;		//Make instance of enemy
+	PT11 pt11(*view[0]);		//Make instance of robot (sim)
+	PT11 enemy(*view[0]);		//Make instance of enemy
 
 	//if (AI_player == 1) pt11.init_neural();		//REF1-2 Load latest weight data, then randomize it (either relative to best one or fully random)
 	//if(AI_enemy == 1) enemy.init_neural();
@@ -221,9 +221,17 @@ int main()
 			//view[0]->acquire();					//Get RGB image
 			view[index]->draw_border();
 			//view[0]->draw_border();
-
 			view[0]->set_processing(0);			//Set and Prep for original copy
 			view[0]->processing();				//Make a copy of the rgb image
+
+
+			view[0]->set_processing(1);			// Create greyscale/thresholded image 'a' and 'rgb'
+			view[0]->processing();				// So image 'a' can be copied into PT11 'radar_greyscale' image object
+			view[0]->set_processing(3);			// Return 'rgb' to originally acquired image
+			view[0]->processing();				// So image 'rgb' can be copied into PT11 'radar_rgb' image object
+
+			pt11.acquire_camera_image(*view[0]);	// Copies image 'rgb' and greyscale (ie: binary) image 'a' into radar image objects, creates label image
+
 
 			/*
 			view[0]->set_processing(1);			//Prepare rgb image for process used to keep tracking
@@ -238,8 +246,8 @@ int main()
 			//view[0]->set_processing(5);
 			//view[0]->processing();
 			*/
-			view[0]->set_processing(0);			//Set and Prep for original copy
-			view[0]->processing();				//Make a copy of the rgb image
+			//view[0]->set_processing(0);			//Set and Prep for original copy		This is redundant?? 
+			//view[0]->processing();				//Make a copy of the rgb image			Delete this??
 
 			for (int i = 6; i < 10; i++)
 			{
@@ -263,8 +271,8 @@ int main()
 			view[0]->processing();				//Run process
 
 			
-			pt11.label_nb_1 = (int)view[0]->label_at_coordinate(pt_i[2] + 15, pt_j[2] + 15);
-			pt11.label_nb_2 = (int)view[0]->label_at_coordinate(pt_i[0] + 15, pt_j[0] + 15);
+			pt11.label_nb_1 = (int)view[0]->label_at_coordinate(pt_i[2] + 15, pt_j[2] + 15);	//Labeling front wheel (since centroid is not touching object, 15 pixel offset ensures labelling)
+			pt11.label_nb_2 = (int)view[0]->label_at_coordinate(pt_i[0] + 15, pt_j[0] + 15);	//Labelling back wheel
 
 			enemy.label_nb_1 = (int)view[0]->label_at_coordinate(pt_i[1] + 15, pt_j[1] + 15);
 			enemy.label_nb_2 = (int)view[0]->label_at_coordinate(pt_i[3] + 15, pt_j[3] + 15);
@@ -308,7 +316,8 @@ int main()
 				//enemy.manual_set(pw_l_o, pw_r_o, pw_laser_o, laser_o);
 			}
 
-			//view[0]->acquire(); // Print RGB Image to screen
+			view[0]->set_processing(3);	//Without this, we would see a thresholded greyscale image of rgb, this brings the original image back.
+			view[0]->processing();
 
 			for (int i = 0; i < 4; i++)
 			{
@@ -326,6 +335,8 @@ int main()
 			*/
 			//draw_point_rgb(view[0]->return_image(), pt_i[1], pt_j[1], 0, 0, 255);
 			//draw_point_rgb(view[0]->return_image(), pt_i[3], pt_j[3], 0, 0, 255);
+
+			pt11.get_safe_zone(*view[0], enemy, pt_i, pt_j);		//This function draws directly onto the latest RGB before its viewed on screen
 
 			view[index]->view();	//View the the processed image MUNEEB REF 
 			//view[0]->view();
