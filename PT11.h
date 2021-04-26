@@ -39,7 +39,7 @@ private:
 	bool state_dir[2];	//Trigger to determine which side enemy located
 	bool flag_reset;
 	bool is_there_obstacle;
-	double distance_enemy1;
+	double distance_enemy1, distance_enemy2, distance_enemy_avg;
 
 	int Lx[8];
 	int Ly[8];
@@ -53,6 +53,9 @@ private:
 
 	Neural_Net* topology;
 	double trial_timer1, trial_timer2, trial_dt;
+
+	double VFF_theta;
+	double VFF_mag;
 
 public:
 	PT11(Camera& view);
@@ -68,6 +71,7 @@ public:
 	double get_x2() { return x2; }	//Centroid of back robot circle
 	double get_y2() { return y2; }	//Centroid of back robot circle
 	void calculate_theta(double x1, double y1, double x2, double y2, double &theta);
+	void theta_target_delta_fix(double target_theta,double& target_delta);
 	bool get_reset_state() { return flag_reset; }
 
 	void distance_sensor(Camera& view, PT11 enemy);
@@ -85,6 +89,7 @@ public:
 
 	void highlight_view(Camera& view, PT11 enemy);
 	void hide_shadows(int arrx[], int arry[], Camera& view, double theta_index, int& radar_radius, int radius_limit, bool& enemy_trigger, PT11 enemy, int radius_jump);
+	void VFF_section_modifier(double theta_index, double offset, double range, int& radius_limit, int limit_val, double& multiplier, double multiplier_val);
 
 	void acquire_camera_image(Camera& view);   //Radar-Evasion: Assigns rgb, greyscale and label image to their respect PT11 objects for processing.
 	void get_safe_zone(Camera& view, PT11 enemy, int pt_i[4], int pt_j[4]);			//Radar-Evasion: Compiles all pixels into "vision" lines expanding from robot centroid for Radar processing
