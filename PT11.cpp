@@ -1033,7 +1033,8 @@ void PT11::attack(int& pw_l, int& pw_r, int& pw_laser, int& laser)
 	
 	if (target_state == 1 && (target_delta1 < 0.4 || target_delta2 < 0.4))
 	{
-		cout << "FIRE! FIRE!" << endl;
+		//cout << "FIRE! FIRE!" << endl;
+		//This is where you could add the laser thing later
 	}
 	
 	//cout << distance_enemy1 << endl;
