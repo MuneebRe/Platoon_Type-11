@@ -24,7 +24,6 @@ using namespace std;
 
 #include "Camera.h"
 #include "PT11.h"
-#include "NeuralNet.h"
 
 #include "Neural_Network/NeuroNet.h"
 #include "Neural_Network/Input.h"
@@ -462,6 +461,8 @@ void PT11::is_obstacle_before_enemy(int arrx[], int arry[], PT11 enemy, Camera& 
 	delete[]k;
 	
 	distance_enemy1 = sqrt(pow(enemy.get_x1() - x1, 2) + pow(enemy.get_y1() - y1, 2));
+	distance_enemy2 = sqrt(pow(enemy.get_x2() - x1, 2) + pow(enemy.get_y2() - y1, 2));
+	distance_enemy_avg = (distance_enemy1 + distance_enemy2) / 2;
 	/*
 	//int distance_enemy2 = sqrt(pow(enemy.get_x2() - x1, 2) + pow(enemy.get_y2() - y1, 2));
 	int enemy_no_obs1;
@@ -608,8 +609,10 @@ void PT11::calculate_theta(double x1, double y1, double x2, double y2, double &t
 	//cout << x1 << "\t" << y1 << "\t" << theta << endl;
 }
 
-void PT11::theta_target_delta_fix(double theta_target, double& target_delta, int& aim_dir)
+void PT11::theta_target_delta_fix(double theta_target, double& target_delta)
 {
+	int aim_dir;
+
 	target_delta = theta_target - theta;
 
 	if (target_delta < 0) target_delta = theta_target - theta + 2 * M_PI;
@@ -628,22 +631,33 @@ void PT11::theta_target_delta_fix(double theta_target, double& target_delta, int
 		target_delta = value2;
 		aim_dir = 1;
 	}
+
+	if (aim_dir == 1)
+	{
+		target_delta = -target_delta;
+	}
+	if (aim_dir == -1)
+	{
+		target_delta = target_delta;
+	}
 }
 
 void PT11::find_target(PT11 enemy)
 {
 	calculate_theta(enemy.get_x1(), enemy.get_y1(), x1, y1, theta_target1);
-	//calculate_theta(enemy.get_x2(), enemy.get_y2(), x1, y1, theta_target2);
+	calculate_theta(enemy.get_x2(), enemy.get_y2(), x1, y1, theta_target2);
 	//cout << theta_target1 << endl;
 
 	int aim_dir;
 
-	//cout << theta_target1 << "   ";
+	//cout << theta_target1 << "   " << theta_target2 << endl;
 
-	theta_target_delta_fix(theta_target1, target_delta1, aim_dir);
+	theta_target_delta_fix(theta_target1, target_delta1);
+	theta_target_delta_fix(theta_target2, target_delta2);
 
-	//cout << target_delta1 << "    " << aim_dir << endl;
+	//cout << target_delta1 << "     " << target_delta2 << "    " << endl;
 	
+	/*
 	if (aim_dir == 1)
 	{
 		state_dir[0] = 0;
@@ -660,35 +674,8 @@ void PT11::find_target(PT11 enemy)
 		state_dir[0] = 0;
 		state_dir[1] = 0;
 	}
-
-	//cout << state_dir[0] << "    " << state_dir[1] << endl;
-}
-
-void PT11::m_runNet(int& pw_l, int& pw_r, int& laser)
-{
-	
-	net_mem[0] = collision_state[0];
-	net_mem[1] = collision_state[1];
-	net_mem[2] = collision_state[2];
-	net_mem[3] = collision_state[3];
-	net_mem[4] = state_dir[0];
-	net_mem[5] = state_dir[1];
-	net_mem[6] = target_state;
-	
-	toTerminal2(net_mem, net_out);
-	
-	/*
-	for (int i = 0; i < 7; i++)
-	{
-		cout << net_mem[i] << "\t";
-	}
-	cout << endl;
 	*/
-
-	pw_l = net_out[0]*1000+1000;
-	pw_r = net_out[1]*1000+1000;
-	laser = net_out[2];
-	
+	//cout << state_dir[0] << "    " << state_dir[1] << endl;
 }
 
 void PT11::NeuroLearn(int& pw_l, int& pw_r, int& laser, int &trial_number) 
@@ -936,12 +923,124 @@ void PT11::scout(int& pw_l, int& pw_r, int& pw_laser, int& laser)
 
 void PT11::attack(int& pw_l, int& pw_r, int& pw_laser, int& laser)
 {
+	int u[2] = { 0,0 };
+
+	static double time1 = 0;
+	static double time2 = 0.1;
+	double time_delta;
+	time2 = high_resolution_time();
+	time_delta = time2 - time1;
+	time1 = time2;
+
+	double kp_PID = 10000;
+	double kd_PID = 30;
+	double ki_PID = 1;
+
+	static double error = 0;
+	static double old_error = 0;
+	static double error_dot = 0;
+	static double int_error = 0;
+
+	static double theta_delta;
+	int aim_dir;
+
+	theta_target_delta_fix(VFF_theta, theta_delta);
+
+	if (distance_enemy_avg < 150)
+	{
+		if (target_delta1 > target_delta2)
+		{
+			error = target_delta2;
+		}
+		else if (target_delta1 < target_delta2)
+		{
+			error = target_delta1;
+		}
+	}
+	else
+	{
+		error = theta_delta;
+	}
+	error = theta_delta;
+	//fout << VFF_mag << endl;
+	error_dot = (error - old_error) / time_delta;
+	int_error = int_error + error * time_delta;
+	u[1] = kp_PID * error + ki_PID * int_error + kd_PID * error_dot;
+	
+	if (u[1] > 400) u[1] = 400;
+	if (u[1] < -400) u[1] = -400;
+
+	old_error = error;
+
+	double error_limit = 1.00;
+
+	if (abs(error) <= error_limit)
+	{
+		u[0] = 500;
+	}
+	if ( abs(error) > error_limit) {
+		u[0] = 0;
+	}
+
+
+	if (target_state == 1)
+	{
+		u[0] = 500;
+		u[1] = 0;
+
+		if (collision_state[0] == 1) u[0] = -100;
+		if (collision_state[2] == 1) u[0] = 100;
+	}
+
+	if (collision_state[0] == 1) u[0] = -100;
+	//if (collision_state[1] == 1) u[1] = 100;
+	//if (collision_state[3] == 1) u[1] = -100;
+	if (collision_state[2] == 1) u[0] = 300;
+
+	//if (distance_log[6] < 4) u[1] = 100;
+	//if (distance_log[2] < 4) u[1] = -100;
+	
+	if (VFF_mag < 150) u[0] = 500;
+	if (VFF_mag > 3000) u[0] = 0;
+	
+	//cout << abs(error) << "   " << VFF_mag << endl;
+
+	if (distance_enemy_avg < 150)
+	{
+		u[0] = 0;
+	}
+	
+	if (distance_log[0] < 30 && target_state == 1 && abs(error) < 0.05)
+	{
+		u[0] = 0;
+	}
+	
+	if (target_state == 1 && (target_delta1 < 0.4 || target_delta2 < 0.4))
+	{
+		cout << "FIRE! FIRE!" << endl;
+	}
+	
+	//cout << distance_enemy1 << endl;
+
+	this->pw_l = 1500 + u[1] - u[0];
+	this->pw_r = 1500 + u[1] + u[0];
+
+	//cout << this->pw_l << "\t" << this->pw_r << endl;
+	//cout << distance_log[0] << endl;
+	//cout << distance_log[0] << "   " << target_state << "   " <<  abs(error) << endl;
+
+
+	pw_r = this->pw_r;
+	pw_l = this->pw_l;
+	laser = 0;
+
+
+	/*
 	int u[2];
 
 	u[0] = 0;
 	u[1] = 0;
 
-	int action = 5;
 	double theta_delta;
 	int aim_dir;
 
@@ -976,7 +1075,7 @@ void PT11::attack(int& pw_l, int& pw_r, int& pw_laser, int& laser)
 	pw_r = this->pw_r;
 	pw_l = this->pw_l;
 	laser = 0;
-
+	*/
 	/*
 	switch (action)
 	{
@@ -1003,7 +1102,7 @@ void PT11::highlight_view(Camera& view, PT11 enemy)
 	double theta_index = 0;
 	double theta_jump = 0.1;
 	int radar_minimum = 50;
-	int radius_jump = 5;
+	int radius_jump = 2;
 	int radius_limit;
 	double vector_x = 0;
 	double vector_y = 0;
@@ -1015,9 +1114,9 @@ void PT11::highlight_view(Camera& view, PT11 enemy)
 
 	while (theta_index < (2 * M_PI))
 	{
-		radius_limit = 250;
+		radius_limit = 200;
 		multiplier = 1;
-		enemy_multiplier = 1.0;
+		enemy_multiplier = -20.0;
 		bool enemy_trigger = 0;
 		theta_index = theta_index + theta_jump;
 
@@ -1197,8 +1296,9 @@ void PT11::hide_shadows(int arrx[], int arry[], Camera& view, double theta_index
 		}
 		
 		
-		if (what_label == enemy.label_nb_1 || what_label == enemy.label_nb_2)
+		if ((what_label == enemy.label_nb_1 || what_label == enemy.label_nb_2) )
 		{
+			
 			enemy_trigger = 1;
 		}
 		

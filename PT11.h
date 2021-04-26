@@ -36,7 +36,7 @@ private:
 	bool state_dir[2];	//Trigger to determine which side enemy located
 	bool flag_reset;
 	bool is_there_obstacle;
-	double distance_enemy1;
+	double distance_enemy1, distance_enemy2, distance_enemy_avg;
 
 	int Lx[8];
 	int Ly[8];
@@ -68,7 +68,7 @@ public:
 	double get_x2() { return x2; }
 	double get_y2() { return y2; }
 	void calculate_theta(double x1, double y1, double x2, double y2, double &theta);
-	void theta_target_delta_fix(double target_theta,double& target_delta, int& aim_dir);
+	void theta_target_delta_fix(double target_theta,double& target_delta);
 	bool get_reset_state() { return flag_reset; }
 
 	void distance_sensor(Camera& view, PT11 enemy);

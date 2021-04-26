@@ -51,7 +51,7 @@ int main()
 	
 	// number of obstacles
 	N_obs  = 2;
-	/*
+	
 	x_obs[1] = 300; // pixels
 	y_obs[1] = 200; // pixels
 	size_obs[1] = 1.0; // scale factor 1.0 = 100% (not implemented yet)	
@@ -59,7 +59,7 @@ int main()
 	x_obs[2] = 300;// 135; // pixels
 	y_obs[2] = 70;// 135; // pixels
 	size_obs[2] = 1.0; // scale factor 1.0 = 100% (not implemented yet)	
-	*/
+	
 	/*
 	N_obs = 5;
 	for (int i = 1; i <= N_obs; i++)
@@ -300,7 +300,7 @@ int main()
 			}
 			else
 			{
-				//enemy.manual_set(pw_l_o, pw_r_o, pw_laser_o, laser_o);
+				enemy.manual_set(pw_l_o, pw_r_o, pw_laser_o, laser_o);
 				//enemy.attack(pw_l_o, pw_r_o, pw_laser_o, laser_o);
 			}
 
@@ -311,8 +311,8 @@ int main()
 			}
 
 			////pt11.m_runNet(pw_l, pw_r, laser);		//Also not used, results inconsistent
-			//view[0]->set_processing(12);			//Set and Prep for original copy
-			//view[0]->processing();				//Make a copy of the rgb image
+			view[0]->set_processing(12);			//Set and Prep for original copy
+			view[0]->processing();				//Make a copy of the rgb image
 			/*
 			view[0]->set_processing(0);			//Set and Prep for original copy
 			view[0]->processing();				//Make a copy of the rgb image
