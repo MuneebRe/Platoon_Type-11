@@ -56,7 +56,7 @@ int main()
 	y_obs[1] = 200; // pixels
 	size_obs[1] = 1.0; // scale factor 1.0 = 100% (not implemented yet)	
 
-	x_obs[2] = 300;// 135; // pixels
+	x_obs[2] = -300;// 135; // pixels
 	y_obs[2] = 70;// 135; // pixels
 	size_obs[2] = 1.0; // scale factor 1.0 = 100% (not implemented yet)	
 	
@@ -270,7 +270,6 @@ int main()
 
 			view[0]->set_processing(11);		//Enable labeling processing and everything
 			view[0]->processing();				//Run process
-
 			
 			pt11.label_nb_1 = (int)view[0]->label_at_coordinate(pt_i[2] + 15, pt_j[2] + 15);	//Labeling front wheel (since centroid is not touching object, 15 pixel offset ensures labelling)
 			pt11.label_nb_2 = (int)view[0]->label_at_coordinate(pt_i[0] + 15, pt_j[0] + 15);	//Labelling back wheel
@@ -283,7 +282,9 @@ int main()
 			pt11.collision_points(*view[0]);	//Move view[0] object into pt11 function
 			pt11.distance_sensor(*view[0], enemy);
 			pt11.find_target(enemy);
+			pt11.highlight_view_evade(*view[0], enemy);
 			pt11.highlight_view(*view[0], enemy);
+			
 
 			if (AI_player == 1)
 			{
@@ -293,7 +294,8 @@ int main()
 			{
 				pt11.manual_set(pw_l, pw_r, pw_laser, laser);		//Control the bot. A W D for laser, arrows for bot
 				//pt11.scout(pw_l, pw_r, pw_laser, laser);
-				pt11.attack(pw_l, pw_r, pw_laser, laser);
+				//pt11.attack(pw_l, pw_r, pw_laser, laser);
+				pt11.evade(pw_l, pw_r, pw_laser, laser);
 			}
 			/*
 			enemy.collision_points(*view[0]);
@@ -312,8 +314,8 @@ int main()
 				//enemy.attack(pw_l_o, pw_r_o, pw_laser_o, laser_o);
 			}
 
-			view[0]->set_processing(3);	//Without this, we would see a thresholded greyscale image of rgb, this brings the original image back.
-			view[0]->processing();
+			//view[0]->set_processing(3);	//Without this, we would see a thresholded greyscale image of rgb, this brings the original image back.
+			//view[0]->processing();
 
 			for (int i = 0; i < 4; i++)
 			{
@@ -321,8 +323,8 @@ int main()
 			}
 
 			////pt11.m_runNet(pw_l, pw_r, laser);		//Also not used, results inconsistent
-			view[0]->set_processing(12);			//Set and Prep for original copy
-			view[0]->processing();				//Make a copy of the rgb image
+			//view[0]->set_processing(12);			//Set and Prep for original copy
+			//view[0]->processing();				//Make a copy of the rgb image
 			/*
 			view[0]->set_processing(0);			//Set and Prep for original copy
 			view[0]->processing();				//Make a copy of the rgb image
