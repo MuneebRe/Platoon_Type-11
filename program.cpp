@@ -51,15 +51,15 @@ int main()
 	
 	// number of obstacles
 	N_obs  = 2;
-	/*
-	x_obs[1] = 300; // pixels
+	
+	x_obs[1] = 250; // pixels
 	y_obs[1] = 200; // pixels
 	size_obs[1] = 1.0; // scale factor 1.0 = 100% (not implemented yet)	
 
 	x_obs[2] = 300;// 135; // pixels
-	y_obs[2] = 70;// 135; // pixels
+	y_obs[2] = 300;// 135; // pixels
 	size_obs[2] = 1.0; // scale factor 1.0 = 100% (not implemented yet)	
-	*/
+	
 	/*
 	N_obs = 5;
 	for (int i = 1; i <= N_obs; i++)
@@ -125,15 +125,15 @@ int main()
 	static int trial_number = 0;
 	//cout << "Trial Number " << trial_number << " begin!" << endl;
 	// set robot initial position (pixels) and angle (rad)
-	x0 = 470;
-	y0 = 300;
+	x0 = 100;
+	y0 = 200;
 	theta0 = 0;
 	//theta0 = 3.14159/2;
 	set_robot_position(x0,y0,theta0);
 	
 	// set opponent initial position (pixels) and angle (rad)
-	x0 = 50;
-	y0 = 400;
+	x0 = 470;
+	y0 = 300;
 	//theta0 = 3.14159/4;
 	theta0 = 3.14159 / 2;
 	set_opponent_position(x0,y0,theta0);
@@ -316,7 +316,7 @@ int main()
 			}
 			else
 			{
-				//enemy.manual_set(pw_l_o, pw_r_o, pw_laser_o, laser_o);
+				enemy.manual_set(pw_l_o, pw_r_o, pw_laser_o, laser_o);
 				//enemy.attack(pw_l_o, pw_r_o, pw_laser_o, laser_o);
 			}
 
