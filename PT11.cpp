@@ -82,10 +82,29 @@ PT11::PT11(Camera& view)
 	radar_label.width = 640;
 	radar_label.height = 480;
 
-	allocate_image(radar_rgb);
-	allocate_image(radar_greyscale);
-	allocate_image(radar_label);
+	safezone_greyscale.type = GREY_IMAGE;
+	safezone_greyscale.width = 640;
+	safezone_greyscale.height = 480;
 
+	safezone_label.type = LABEL_IMAGE;
+	safezone_label.width = 640;
+	safezone_label.height = 480;
+
+	radar_a.type = GREY_IMAGE;
+	radar_a.width = 640;
+	radar_a.height = 480;
+
+	radar_b.type = GREY_IMAGE;
+	radar_b.width = 640;
+	radar_b.height = 480;
+
+	allocate_image(radar_rgb);	//Houses RGB image with safezones drawn on
+	allocate_image(radar_greyscale);	//Houses greyscale image copied from object 'a' from Camera class, used to process the safe zone
+	allocate_image(radar_label);		//Houses the label image copied from object 'label' from Camera class, used to process the safe zone
+	allocate_image(safezone_greyscale);	//Houses the threshold processed image of the safezone, processed with the help of radar_rgb masking the safe zone
+	allocate_image(safezone_label);		//Houses the labelled image of safezone_greyscale, labelling the safe zones
+	allocate_image(radar_a);			//Used to erode/dilate binary image safezone_greyscale
+	allocate_image(radar_b);
 }
 
 void PT11::init_neural()	//REF1-4 Initialize everytime the simulations starts over
@@ -1299,7 +1318,7 @@ void PT11::get_safe_zone(Camera& view, PT11 enemy, int pt_i[4], int pt_j[4]) {
 		border_x = 640;		//Initialize border_x for this sweep NOTE:(should be in a loop or something eventually, since border will change to 0 at some point)
 
 		if (border_y == y0) {
-			for (i = x0; i < border_x - 3; i++) {
+			for (i = x0; i < border_x - 30; i++) {
 				//Iterate through all x-values for each line, LATER: account for vertical leaning lines
 				j = y0;
 
@@ -1316,7 +1335,7 @@ void PT11::get_safe_zone(Camera& view, PT11 enemy, int pt_i[4], int pt_j[4]) {
 			slope = delta_y / delta_x;
 			b = y0 - (slope * x0);
 
-			for (i = x0; i < border_x - 3; i++) {
+			for (i = x0; i < border_x - 30; i++) {
 				//Iterate through all x-values for each line, LATER: account for vertical leaning lines
 				j = int((slope * i) + b);
 
@@ -1348,7 +1367,7 @@ void PT11::get_safe_zone(Camera& view, PT11 enemy, int pt_i[4], int pt_j[4]) {
 		border_x = 0;	//Left of screen
 
 		if (border_y == y0) {
-			for (i = x0; i > border_x; i -= 1) {
+			for (i = x0; i > border_x+30; i -= 1) {
 				//Iterate through all x-values for each line (Lines start from centroid as if laser is shooting out)
 				j = y0;
 
@@ -1366,7 +1385,7 @@ void PT11::get_safe_zone(Camera& view, PT11 enemy, int pt_i[4], int pt_j[4]) {
 			slope = delta_y / delta_x;
 			b = y0 - (slope * x0);
 
-			for (i = x0; i > border_x; i -= 1) {
+			for (i = x0; i > border_x+30; i -= 1) {
 				//Iterate through all x-values for each line (Lines start from centroid as if laser is shooting out)
 				j = int((slope * i) + b);
 
@@ -1402,7 +1421,7 @@ void PT11::get_safe_zone(Camera& view, PT11 enemy, int pt_i[4], int pt_j[4]) {
 		border_y = 480;		//Initialize border_x for this sweep NOTE:(should be in a loop or something eventually, since border will change to 0 at some point)
 
 		if (border_x == x0) {
-			for (j = y0; j < border_y; j++) {
+			for (j = y0; j < border_y - 20; j++) {
 				//Iterate through all x-values for each line, LATER: account for vertical leaning lines
 				i = x0;
 
@@ -1419,7 +1438,7 @@ void PT11::get_safe_zone(Camera& view, PT11 enemy, int pt_i[4], int pt_j[4]) {
 			slope = delta_x / delta_y;
 			b = x0 - (slope * y0);
 
-			for (j = y0; j < border_y; j++) {
+			for (j = y0; j < border_y - 20; j++) {
 				//Iterate through all x-values for each line, LATER: account for vertical leaning lines
 				i = int((slope * j) + b);
 
@@ -1452,7 +1471,7 @@ void PT11::get_safe_zone(Camera& view, PT11 enemy, int pt_i[4], int pt_j[4]) {
 		border_y = 0;		//Initialize border_x for this sweep NOTE:(should be in a loop or something eventually, since border will change to 0 at some point)
 
 		if (border_x == x0) {
-			for (j = y0; j > border_y; j -= 1) {
+			for (j = y0; j > border_y + 20; j -= 1) {
 				//Iterate through all x-values for each line, LATER: account for vertical leaning lines
 				i = x0;
 
@@ -1470,7 +1489,7 @@ void PT11::get_safe_zone(Camera& view, PT11 enemy, int pt_i[4], int pt_j[4]) {
 			slope = delta_x / delta_y;
 			b = x0 - (slope * y0);
 
-			for (j = y0; j > border_y; j -= 1) {
+			for (j = y0; j > border_y+20; j -= 1) {
 				//Iterate through all x-values for each line, LATER: account for vertical leaning lines
 				i = int((slope * j) + b);
 
@@ -1500,12 +1519,211 @@ void PT11::get_safe_zone(Camera& view, PT11 enemy, int pt_i[4], int pt_j[4]) {
 
 	}
 
+
+	//RGB image mask, radar_rgb, of safe zone is initialized by draw_safe_zone() by this point.
+	
+	threshold_radar(view, enemy, pt_i, pt_j);
+	//safezone_greyscale binary image is initialized by threshold_radar(), safezones are now white and everything else should be black
+
+	//assess_safe_zone() This function will label safezone_greyscale, placing it into safezone_label label image. It will then find the centroids
+	assess_safe_zone();
+
+	if (KEY('V')) {
+		copy(safezone_greyscale, radar_rgb);
+		copy(radar_rgb, view.return_image());
+	}
+
 	if (KEY('C')) {
 		copy(radar_rgb, view.return_image());
 	}
 
+
 	delete[] line_array_i;
 	delete[] line_array_j;
+}
+
+void PT11::threshold_radar(Camera& view, PT11 enemy, int pt_i[4], int pt_j[4]) {
+//Taking all pixel values of radar_rgb RGB image and converting them to black/whitein safezone_greyscale
+//All safezone pixel colors will be black, all other pixels will be white
+	ibyte* p_rgb, * p_greyscale;
+	i2byte* p_label;
+	int i, j, k1, k2;
+	p_rgb = radar_rgb.pdata; //Increment this pointer through the rgb image, and access the pixel values
+	p_greyscale = safezone_greyscale.pdata;	//Once safezone pixels are detected, draw them as 255 value white pixels. (SHOULD BE 0 BLACK BUT NOT INVERTING YET)
+	p_label = (i2byte*)view.return_label().pdata;
+	int size1;
+	size1 = 640 * 480;
+
+	k1 = pt_i[1] + 640 * pt_j[1];	//calculating the k pixel value of the centroid of the robot, will check if it's white which indicates its in a safe zone
+	k2 = pt_i[3] + 640 * pt_j[3];
+
+	/* This works too
+	for (j = 0; j < 480; j++) {
+		for (i = 0; i < 640; i++) {
+			k = i + j * 640;
+			if (p_rgb[k * 3] == 50 && p_rgb[(k * 3) + 1] == 205 && p_rgb[(k * 3) + 2] == 50) {
+				p_greyscale[k] = 255;	//Safezone pixel will be white (no inversion or clean up processing like erosion/dialate happening yet)
+			}
+			else p_greyscale[k] = 0;	//every non safezone pixel
+		}
+	} */
+
+	for (i = 0; i < size1; i++) {
+		if (p_rgb[i * 3] == 50 && p_rgb[(i * 3) + 1] == 205 && p_rgb[(i * 3) + 2] == 50) {
+			p_greyscale[i] = 255;	//Safezone pixel will be white (no inversion or clean up processing like erosion/dialate happening yet)
+		}
+		else p_greyscale[i] = 0;
+	}
+
+	
+	
+	for (i = 0; i < size1; i++) {
+		//Solution 1 to preventing robot from appearing black in safe zone: if centroid is in safe zone, make robot white like safe zone
+
+		 if (p_greyscale[i] == 0) {
+			//Checking if pixel is black or white in safezone mask (ie: the binary image that only depicts the safe zone), we only care about black pixels as the robot will appear black in safe zone
+			 if (p_label[i] == enemy.label_nb_1) {
+				 //Checking if the black pixel is apart of the friendly robot (in this case we're using the friendly robot as the danger, thats why we are usign enemy label)
+				 if (p_greyscale[k1] == 255 || p_greyscale[k1 - 10] == 255 || p_greyscale[k1 + 10] == 255 || p_greyscale[k1 + (640 * 10)] == 255 || p_greyscale[k1 - (640 * 10)] == 255) {
+					 //If the centroid of the robot is in the safe zone, all pixels of that robot should be white
+					 p_greyscale[i] = 255;
+				 }
+			 }
+			 if (p_label[i] == enemy.label_nb_2) {
+				 if (p_greyscale[k2] == 255 || p_greyscale[k2 - 10] == 255 || p_greyscale[k2 + 10] == 255 || p_greyscale[k2 + (640 * 10)] == 255 || p_greyscale[k2 - (640 * 10)] == 255) {
+					 //If the centroid of the robot is in the safe zone, all pixels of that robot should be white
+					 p_greyscale[i] = 255;
+				 }
+			}
+
+		} 
+
+
+		/* Not a good idea: too much noise, which results in more objects
+		//Solutiont 2 to preventing robo from appearing in black safe zone: if robot pixel is near safe zone, make it white
+		 if (p_greyscale[i] == 0) {
+			 if (p_label[i] == enemy.label_nb_1 || p_label[i] == enemy.label_nb_2) {
+				 //Checking if the black pixel is apart of the friendly robot (in this case we're using the friendly robot as the danger, thats why we are usign enemy label)
+				 if (p_rgb[(i * 3)+30] == 50 && p_rgb[((i * 3) + 1)+30] == 205 && p_rgb[((i * 3) + 2)+30] == 50 || p_rgb[(i * 3) - 30] == 50 && p_rgb[((i * 3) + 1) - 30] == 205 && p_rgb[((i * 3) + 2) - 30] == 50 || p_rgb[(i * 3) + (1920 * 10)] == 50 && p_rgb[((i * 3) + 1) + (1920 * 10)] == 205 && p_rgb[((i * 3) + 2) + (1920 * 10)] == 50 || p_rgb[(i * 3) - (1920 * 10)] == 50 && p_rgb[((i * 3) + 1) - (1920 * 10)] == 205 && p_rgb[((i * 3) + 2) - (1920 * 10)] == 50) {
+					 p_greyscale[i] = 255;	//Safezone pixel will be white (no inversion or clean up processing like erosion/dialate happening yet)
+				 }
+			 }
+		 } */
+	}
+
+	//perform post processing
+
+	copy(safezone_greyscale, radar_a);
+	erode(radar_a, radar_b);			//Erode
+	copy(radar_b, radar_a);
+	dialate(radar_a, radar_b);			//Dilate
+	copy(radar_b, radar_a);
+	erode(radar_a, radar_b);			//Erode
+	copy(radar_b, radar_a);
+	dialate(radar_a, radar_b);			//Dilate
+	copy(radar_b, radar_a);
+
+	copy(radar_a, safezone_greyscale);
+
+	//Results in  safezone_greyscale image being completed: This image makes the safe zone white, everything else black, begin processing to reach these safe zones
+
+}
+
+void PT11::assess_safe_zone() {
+	//This function will label the newly obtained binary image "safezone_greyscale", effectively labelling all the safe zones.
+	//It will determine the centroids of the safe zones, and store them in an array.
+	//There is a filter in radar_centroid() called "number_of_pixels", which manipulates variable "flag", which determines if the centroid of an object should be stored.
+	//The centroid of an object will be stored in the array only if the object involved more than 500 pixels (can adjust this), ensures the only certain safe zones matter.
+	//We will use these array of centroids for further processing ie: which centroids are closer?? etc.
+	double i, j;	//These variables will house the actual centroids of the safe zone objects in the labelled image, safezone_label
+	int k;			//This variable is used for incrementing through the loop, through each label number to assess each labelled object
+	
+	int flag = 0;	//This flag will be set to 0 or 1 in radar_centroid(), it controls whether a labelled object in safezone_label is big enough to be considered a safezone
+					//If it is, flag = 1, and centroids will be stored and array will increment. If not, then it was probably a stray pixel or noise, ignore.
+					//Current minimum size of safe zone is 500 pixels (number_of_pixels variable in radar_centroid() ), random number I picked!
+	safezone_array_index = 0;
+	label_image(safezone_greyscale, safezone_label, radar_nlabels);	//radar_nlabels is an int variable which says number of safe zones that are labelled 
+																	//I made a safezone_label...
+	k = 1;
+	cout << "\n number of safe zones detected: " << radar_nlabels;
+	for (k; k <= radar_nlabels; k++) {
+		radar_centroid(safezone_greyscale, safezone_label, k, i, j, flag);
+		if (flag == 1) {
+			safezone_centroid_x[safezone_array_index] = (int)i;
+			safezone_centroid_y[safezone_array_index] = (int)j;
+			draw_point_rgb(radar_rgb, i, j, 255, 0, 0);		//Visualizes the point
+			safezone_array_index++;
+			
+		}
+	}
+
+	/* Testing, tracks centroids
+	* //cout << endl << safezone_array_index;
+	for (int l = 0; l < safezone_array_index; l++) {
+		cout << "\nCentroid " << l << "\tx: " << safezone_centroid_x[l] << "\t y: " << safezone_centroid_y[l];
+	}
+	*/
+}
+
+int PT11::radar_centroid(image& a, image& label, int nlabel, double& ic, double& jc, int &flag) {
+	// calculate the greyscale centroid of a labelled object
+// a - GREY_IMAGE type
+// label - LABEL_IMAGE type (pixel values 0-65535)
+// nlabel - label number
+// ic - i centroid coordinate (x direction / right)
+// jc - j centroid coordinate (y direction / up)
+
+	//ADJUSTED -> Count number of pixels used per centroid, we only care for the labelled objects with lots of pixels
+	{
+		ibyte* pa;
+		i2byte* pl;
+		i4byte i, j, width, height;
+		double mi, mj, m, rho;
+		int number_of_pixels;	//This counter tracks the number of pixels per labelled object, this will filter out only the centroids that matter
+
+		number_of_pixels = 0;
+		flag = 0;
+		// check for compatibility of a, label
+		if (a.height != label.height || a.width != label.width) {
+			cout << "\nerror in centroid: sizes of a, label are not the same!";
+			return 1;
+		}
+
+		if (a.type != GREY_IMAGE || label.type != LABEL_IMAGE) {
+			cout << "\nerror in centroid: input types are not valid!";
+			return 1;
+		}
+
+		pa = a.pdata;
+		pl = (i2byte*)label.pdata;
+
+		// number of pixels
+		width = a.width;
+		height = a.height;
+
+		mi = mj = m = 0.0;
+
+		for (j = 0; j < height; j++) { // y-dir
+			for (i = 0; i < width; i++) { // x-dir
+				if (pl[j * width + i] == nlabel) {
+					rho = pa[j * width + i];
+					m += rho;
+					// assume pixel has area of 1 so m = rho * A = rho
+					mi += rho * i;
+					mj += rho * j;
+					number_of_pixels++;
+				}
+			}
+		}
+
+		if (number_of_pixels > 400) {
+			ic = mi / m;
+			jc = mj / m;
+			flag = 1; //Trigger that it is allowed to be stored;
+		}
+
+		return 0;
+	}
 }
 
 

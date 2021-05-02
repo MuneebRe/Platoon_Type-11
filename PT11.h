@@ -25,9 +25,10 @@ public:
 
 
 private:
-	image radar_label, radar_rgb, radar_greyscale;	//Radar-Evasion
+	image radar_label, radar_rgb, radar_greyscale, safezone_greyscale, safezone_label, radar_a, radar_b;	//Radar-Evasion
 	i2byte radar_nlabel;		//Radar-Evasion
-	int radar_nlabels, radar_robot_objects[5]; //Radar-Evasion: radar_robot_objects array will hold object labels for radar detection filtering
+	int radar_nlabels; //Radar-Evasion: radar_robot_objects array will hold object labels for radar detection filtering
+	int safezone_centroid_x[50], safezone_centroid_y[50], safezone_array_index; //This will house the i and j value of the safe zones, which will be used to assess which is closer and for processing (50 assumes only 50 safezones max)
 	double x1,x2, dx, ddx;
 	double y1,y2, dy, ddy;
 	double theta, dtheta, ddtheta;
@@ -91,6 +92,8 @@ public:
 	void draw_safe_zone(int* line_array_i, int* line_array_j, int size, Camera& view, PT11 enemy);		//Radar-Evasion: Radar processing function to determine safe zones and store inro rgb image for masking purposes
 	//Might remove identify_radar_objects() function! 
 	void identify_radar_objects(int pt_i[4], int pt_j[4], Camera& view); //Radar-Evasion: Radar processing function to distinguish between obstacles and robots - necessary for draw_safe_zone
-
+	void threshold_radar(Camera& view, PT11 enemy, int pt_i[4], int pt_j[4]);
+	void assess_safe_zone();
+	int radar_centroid(image& a, image& label, int nlabel, double& ic, double& jc, int& flag);
 	~PT11();
 };

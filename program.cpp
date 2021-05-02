@@ -48,19 +48,20 @@ int main()
 	width1  = 640;
 	height1 = 480;
 	
-	/*
+	
 	// number of obstacles
 	N_obs  = 2;
 
 	x_obs[1] = 300; // pixels
-	y_obs[1] = 0; // pixels
+	y_obs[1] = 100; // pixels
 	size_obs[1] = 1.0; // scale factor 1.0 = 100% (not implemented yet)	
 
 	x_obs[2] = 300;// 135; // pixels
-	y_obs[2] = 70;// 135; // pixels
+	y_obs[2] = 300;// 135; // pixels
 	size_obs[2] = 1.0; // scale factor 1.0 = 100% (not implemented yet)	
-	*/
+	
 
+	/*
 	N_obs = 5;
 	for (int i = 1; i <= N_obs; i++)
 	{
@@ -69,7 +70,7 @@ int main()
 		//y_obs[i] = 0;
 		size_obs[i] = 1.0;
 	}
-
+	*/
 	// set robot model parameters ////////
 	
 	D = 121.0; // distance between front wheels (pixels)
