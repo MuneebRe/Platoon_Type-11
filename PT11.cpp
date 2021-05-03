@@ -158,6 +158,16 @@ void PT11::manual_set(int& pw_l, int& pw_r, int& pw_laser, int& laser)
 
 }
 
+void PT11::manual_set2(int& pw_l, int& pw_r, int& pw_laser, int& laser)
+{
+	
+	pw_r = this->pw_r;
+	pw_l = this->pw_l;
+	laser = 0;
+
+
+}
+
 void PT11::set_coord(double x1, double y1, double x2, double y2)
 {
 	this->x1 = x1;	//Front circle
@@ -1202,7 +1212,7 @@ void PT11::identify_radar_objects(int pt_i[4], int pt_j[4], Camera& view) {
 
 }
 
-void PT11::draw_safe_zone(int* line_array_i, int* line_array_j, int size, Camera& view, PT11 enemy) {
+void PT11::draw_safe_zone(int* line_array_i, int* line_array_j, int size, Camera& view, PT11& enemy) {
 	//old method stored
 	/* OLD method - updated april 23
 	ibyte *p_greyscale, *p_rgb, R, G, B;	//This will iterate through the binary image, perform logic to understand which pixels should be considered green. RGB will be used in view->return_image()
@@ -1276,7 +1286,7 @@ void PT11::draw_safe_zone(int* line_array_i, int* line_array_j, int size, Camera
 	}
 }
 
-void PT11::get_safe_zone(Camera& view, PT11 enemy, int pt_i[4], int pt_j[4]) {
+void PT11::get_safe_zone(Camera& view, PT11& enemy, int pt_i[4], int pt_j[4]) {
 	//This function creates lines that increment from the centroid of robot to the right/left wall, then top/bottom wall. Once the pixels are stored in the array, 
 	//we now have access to i,j value of every pixel in the image *organized from the centroid of the robot* to the walls. 
 	//This will let us process the safe zones and other process functions that are *robot-location sensitive*.
@@ -1528,6 +1538,8 @@ void PT11::get_safe_zone(Camera& view, PT11 enemy, int pt_i[4], int pt_j[4]) {
 	//assess_safe_zone() This function will label safezone_greyscale, placing it into safezone_label label image. It will then find the centroids
 	assess_safe_zone();
 
+	radar_evasion(pt_i, pt_j, enemy);
+
 	if (KEY('V')) {
 		copy(safezone_greyscale, radar_rgb);
 		copy(radar_rgb, view.return_image());
@@ -1538,11 +1550,12 @@ void PT11::get_safe_zone(Camera& view, PT11 enemy, int pt_i[4], int pt_j[4]) {
 	}
 
 
+
 	delete[] line_array_i;
 	delete[] line_array_j;
 }
 
-void PT11::threshold_radar(Camera& view, PT11 enemy, int pt_i[4], int pt_j[4]) {
+void PT11::threshold_radar(Camera& view, PT11& enemy, int pt_i[4], int pt_j[4]) {
 //Taking all pixel values of radar_rgb RGB image and converting them to black/whitein safezone_greyscale
 //All safezone pixel colors will be black, all other pixels will be white
 	ibyte* p_rgb, * p_greyscale;
@@ -1645,7 +1658,7 @@ void PT11::assess_safe_zone() {
 	label_image(safezone_greyscale, safezone_label, radar_nlabels);	//radar_nlabels is an int variable which says number of safe zones that are labelled 
 																	//I made a safezone_label...
 	k = 1;
-	cout << "\n number of safe zones detected: " << radar_nlabels;
+	//cout << "\n number of safe zones detected: " << radar_nlabels;
 	for (k; k <= radar_nlabels; k++) {
 		radar_centroid(safezone_greyscale, safezone_label, k, i, j, flag);
 		if (flag == 1) {
@@ -1726,7 +1739,58 @@ int PT11::radar_centroid(image& a, image& label, int nlabel, double& ic, double&
 	}
 }
 
+void PT11::radar_evasion(int pt_i[4], int pt_j[4], PT11& enemy) {
 
+	int i;
+	double x11, y11; //This variable stores the location of the robot centroid
+	double x22, y22; //This variable stores the location of the safe zone centroid
+	int best_index; //This variable will be used to store the array element index of the best centroid (ie: closest and most appropriate) in safezone_centroid_x[]/safezone_centroid_y[]
+	int best_magnitude; //This variable will help with logic to determine the best centroid
+	double magnitude; //This value will calculate and store the distance between the centroid of the robot and centroid of safe zones
+
+	best_index = 0;
+	best_magnitude = 800; //Start at a high value, replace whenever a shorter distance is input
+	x11 = pt_i[1]; //Front wheels centroid
+	y11 = pt_j[1];
+	x22 = safezone_centroid_x[0];
+	y22 = safezone_centroid_y[0];
+
+	for (i = 0; i < safezone_array_index; i++) {
+		//Increment through each safe zone centroid to find the closest one.
+		x22 = safezone_centroid_x[i];
+		y22 = safezone_centroid_y[i];
+
+		magnitude = sqrt((pow((x22 - x11), 2) + pow((y22 - y11), 2)));
+		if (magnitude < best_magnitude) {
+			best_magnitude = magnitude;
+			best_index = i; //Store the index of the closest centroid
+			//Thus, we will use best_index in safezone_centroid_x/y to do processing
+		}
+	}
+	//cout << "\nThe distance to the closest centroid is: " << best_magnitude;  //Check if closest centroid is being recorded into best_magnitude, subsequent best_index too
+	cout << "\n The best index is: " << best_index;
+	//***MUST ADD SAFE CHECK TO SEE IF OBJECT IS BETWEEN ROBOT AND SAFEZONE CENTROID***
+	/*
+	double target_angle; //angle of line between centroids
+	double delta_angle;	//difference between angle of robot and line to centroid
+	x2 = safezone_centroid_x[best_index];
+	y2 = safezone_centroid_y[best_index];
+	calculate_theta(x11, y11, x22, y22, target_angle);
+	delta_angle = enemy.theta - target_angle;
+
+	if (delta_angle > 10) {
+		enemy.pw_l = 1050;
+		enemy.pw_r = 1050;
+	}
+	else if (delta_angle < -10) {
+		enemy.pw_l = 1950;
+		enemy.pw_r = 1950;
+	}
+	else if (-10<=delta_angle <=10) {
+		enemy.pw_l = 1000;
+		enemy.pw_r = 2000;
+	} */
+}
 
 PT11::~PT11()
 {

@@ -59,6 +59,7 @@ public:
 	PT11(Camera& view);
 	void init_neural();
 	void manual_set(int& pw_l, int& pw_r, int& pw_laser, int& laser);
+	void manual_set2(int& pw_l, int& pw_r, int& pw_laser, int& laser);
 	void set_coord(double x1, double y1, double x2, double y2);
 	void collision_points(Camera &view);
 	void check_collision(int arrx[], int arry[], Camera &view, int i);
@@ -87,13 +88,15 @@ public:
 	void highlight_view(Camera& view, PT11 enemy);
 	void hide_shadows(int arrx[], int arry[], Camera& view, double theta_index, int& radar_radius, int radius_limit, bool& enemy_trigger, PT11 enemy, int radius_jump);
 
+	//Gurv functions:
 	void acquire_camera_image(Camera& view);   //Radar-Evasion: Assigns rgb, greyscale and label image to their respect PT11 objects for processing.
-	void get_safe_zone(Camera& view, PT11 enemy, int pt_i[4], int pt_j[4]);			//Radar-Evasion: Compiles all pixels into "vision" lines expanding from robot centroid for Radar processing
-	void draw_safe_zone(int* line_array_i, int* line_array_j, int size, Camera& view, PT11 enemy);		//Radar-Evasion: Radar processing function to determine safe zones and store inro rgb image for masking purposes
+	void get_safe_zone(Camera& view, PT11& enemy, int pt_i[4], int pt_j[4]);			//Radar-Evasion: Compiles all pixels into "vision" lines expanding from robot centroid for Radar processing
+	void draw_safe_zone(int* line_array_i, int* line_array_j, int size, Camera& view, PT11& enemy);		//Radar-Evasion: Radar processing function to determine safe zones and store inro rgb image for masking purposes
 	//Might remove identify_radar_objects() function! 
 	void identify_radar_objects(int pt_i[4], int pt_j[4], Camera& view); //Radar-Evasion: Radar processing function to distinguish between obstacles and robots - necessary for draw_safe_zone
-	void threshold_radar(Camera& view, PT11 enemy, int pt_i[4], int pt_j[4]);
+	void threshold_radar(Camera& view, PT11& enemy, int pt_i[4], int pt_j[4]);
 	void assess_safe_zone();
 	int radar_centroid(image& a, image& label, int nlabel, double& ic, double& jc, int& flag);
+	void radar_evasion(int pt_i[4], int pt_j[4], PT11& enemy);
 	~PT11();
 };
