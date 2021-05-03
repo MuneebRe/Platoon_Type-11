@@ -57,7 +57,7 @@ int main()
 	size_obs[1] = 1.0; // scale factor 1.0 = 100% (not implemented yet)	
 
 	x_obs[2] = 300;// 135; // pixels
-	y_obs[2] = 70;// 135; // pixels
+	y_obs[2] = 300;// 135; // pixels
 	size_obs[2] = 1.0; // scale factor 1.0 = 100% (not implemented yet)	
 	
 	/*
