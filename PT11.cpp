@@ -1612,7 +1612,7 @@ void PT11::get_safe_zone(Camera& view, PT11& enemy, int pt_i[4], int pt_j[4]) {
 	//THUS: safezone_greyscale binary image is initialized by threshold_radar(), safezones are now white and everything else should be black in "safezone_greyscale"
 
 	//assess_safe_zone() This function will label safezone_greyscale, placing it into safezone_label label image. It will then find the centroids of each labelled safe zone!
-	assess_safe_zone();
+	assess_safe_zone(view);
 
 	//radar_evasion(pt_i, pt_j, enemy); Not needed, using VFF solutions
 
@@ -1718,7 +1718,7 @@ void PT11::threshold_radar(Camera& view, PT11& enemy, int pt_i[4], int pt_j[4]) 
 
 }
 
-void PT11::assess_safe_zone() {
+void PT11::assess_safe_zone(Camera& view) {
 	//This function will label the newly obtained binary image "safezone_greyscale", effectively labelling all the safe zones.
 	//It will determine the centroids of the safe zones, and store them in an array.
 	//There is a filter in radar_centroid() called "number_of_pixels", which manipulates variable "flag", which determines if the centroid of an object should be stored.
@@ -1727,6 +1727,10 @@ void PT11::assess_safe_zone() {
 	double i, j;	//These variables will house the actual centroids of the safe zone objects in the labelled image, safezone_label
 	int k;			//This variable is used for incrementing through the loop, through each label number to assess each labelled object
 	
+	int box_length = 40;
+	int tolerance = 30;
+	int box_i, box_j;
+
 	int flag = 0;	//This flag will be set to 0 or 1 in radar_centroid(), it controls whether a labelled object in safezone_label is big enough to be considered a safezone
 					//If it is, flag = 1, and centroids will be stored and array will increment. If not, then it was probably a stray pixel or noise, ignore.
 					//Current minimum size of safe zone is 500 pixels (number_of_pixels variable in radar_centroid() ), random number I picked!
@@ -1743,8 +1747,19 @@ void PT11::assess_safe_zone() {
 			safezone_centroid_x[safezone_array_index] = (int)i;
 			safezone_centroid_y[safezone_array_index] = (int)j;
 			draw_point_rgb(radar_rgb, i, j, 255, 0, 0);		//Visualizes the point
+
+			for (box_i = -box_length / 2; box_i < box_length/2; box_i++) {
+				for (box_j = -box_length / 2; box_j < box_length/2; box_j++) {
+					if (safezone_centroid_x[safezone_array_index] + box_i < 0 + tolerance || safezone_centroid_x[safezone_array_index] + box_i > 640 - tolerance || safezone_centroid_y[safezone_array_index] + box_j < 0 + tolerance || safezone_centroid_y[safezone_array_index] + box_j > 480 - tolerance) {
+						continue;
+					}
+					else {
+						draw_point_rgb(view.return_image(), safezone_centroid_x[safezone_array_index] + box_i, safezone_centroid_y[safezone_array_index] + box_j, 255, 0, 255);
+					}
+				}
+			}
+
 			safezone_array_index++;
-			
 		}
 	}
 
