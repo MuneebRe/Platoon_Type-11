@@ -331,8 +331,6 @@ int main()
 			//draw_point_rgb(view[0]->return_image(), pt_i[3], pt_j[3], 0, 0, 255);
 
 			pt11.get_safe_zone(*view[0], enemy, pt_i, pt_j);		//This function draws directly onto the latest RGB before its viewed on screen
-			
-			enemy.manual_set2(pw_l_o, pw_r_o, pw_laser_o, laser_o);		//Control the bot. A W D for laser, arrows for bot
 
 			view[index]->view();	//View the the processed image MUNEEB REF 
 			//view[0]->view();
