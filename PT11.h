@@ -92,7 +92,7 @@ public:
 	void get_safe_zone(Camera& view, PT11& enemy, int pt_i[4], int pt_j[4]);			//Radar-Evasion: Compiles all pixels into "vision" lines expanding from robot centroid for Radar processing
 	void draw_safe_zone(int* line_array_i, int* line_array_j, int size, Camera& view, PT11& enemy);		//Radar-Evasion: Radar processing function to determine safe zones and store inro rgb image for masking purposes
 	void threshold_radar(Camera& view, PT11& enemy, int pt_i[4], int pt_j[4]);
-	void assess_safe_zone();
+	void assess_safe_zone(Camera& view);
 	int radar_centroid(image& a, image& label, int nlabel, double& ic, double& jc, int& flag);
 	void radar_evasion(int pt_i[4], int pt_j[4], PT11& enemy); //Using VFF
 	~PT11();
