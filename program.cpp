@@ -125,15 +125,15 @@ int main()
 	static int trial_number = 0;
 	cout << "Trial Number " << trial_number << " begin!" << endl;
 	// set robot initial position (pixels) and angle (rad)
-	x0 = 470;
-	y0 = 300;
+	x0 = 150;
+	y0 = 400;
 	theta0 = 0;
-	//theta0 = 3.14159/2;
+	//theta0 = 3.14159/4;
 	set_robot_position(x0,y0,theta0);
 	
 	// set opponent initial position (pixels) and angle (rad)
-	x0 = 50;
-	y0 = 400;
+	x0 = 150;
+	y0 = 200;
 	//theta0 = 3.14159/4;
 	theta0 = 3.14159 / 2;
 	set_opponent_position(x0,y0,theta0);
@@ -250,6 +250,7 @@ int main()
 			//view[0]->set_processing(0);			//Set and Prep for original copy		This is redundant?? 
 			//view[0]->processing();				//Make a copy of the rgb image			Delete this??
 
+			/*
 			for (int i = 6; i < 10; i++)
 			{
 				view[0]->set_processing(i);		//Run filter for blue, orange, green and red
@@ -258,32 +259,54 @@ int main()
 				pt_j[i-6] = view[0]->get_jc();	//For each color
 			}
 			
+			
+			pt11.set_coord(pt_i[0], pt_j[0], pt_i[3], pt_j[3]);
+			enemy.set_coord(pt_i[2], pt_j[2], pt_i[1], pt_j[1]);
+			*/
 
-			pt11.set_coord(pt_i[2], pt_j[2], pt_i[0], pt_j[0]);
-			enemy.set_coord(pt_i[1], pt_j[1], pt_i[3], pt_j[3]);
-		
 			view[0]->set_processing(1);			//Enable threshold processing and everything
 			view[0]->processing();				//Run process
 		
+			
+
+			view[0]->set_processing(11);		//Enable labeling processing and everything
+			view[0]->processing();				//Run process
+			
+			view[0]->coordinate_finder(pt_i, pt_j);
+
+			
+			
+			for (int i = 13; i < 17; i++)
+			{
+				view[0]->set_processing(i);		//Run filter for blue, orange, green and red
+				view[0]->processing();			//to find centroid location for each
+				pt_i[i - 13] = view[0]->get_ic();	//And put them in this array
+				pt_j[i - 13] = view[0]->get_jc();	//For each color
+			}
+
+			pt11.set_coord(pt_i[2], pt_j[2], pt_i[0], pt_j[0]);
+			enemy.set_coord(pt_i[1], pt_j[1], pt_i[3], pt_j[3]);
+
 			pt11.fill_wheel_void(*view[0]);
 			enemy.fill_wheel_void(*view[0]);
 
 			view[0]->set_processing(11);		//Enable labeling processing and everything
 			view[0]->processing();				//Run process
-
 			
 			pt11.label_nb_1 = (int)view[0]->label_at_coordinate(pt_i[2] + 15, pt_j[2] + 15);	//Labeling front wheel (since centroid is not touching object, 15 pixel offset ensures labelling)
 			pt11.label_nb_2 = (int)view[0]->label_at_coordinate(pt_i[0] + 15, pt_j[0] + 15);	//Labelling back wheel
 
+
 			enemy.label_nb_1 = (int)view[0]->label_at_coordinate(pt_i[1] + 15, pt_j[1] + 15);
 			enemy.label_nb_2 = (int)view[0]->label_at_coordinate(pt_i[3] + 15, pt_j[3] + 15);
 
-			//pt11.label_enemy(view[0], enemy);
 
-			pt11.collision_points(*view[0]);	//Move view[0] object into pt11 function
+			//pt11.collision_points(*view[0]);	//Move view[0] object into pt11 function
 			pt11.distance_sensor(*view[0], enemy);
 			pt11.find_target(enemy);
+			//pt11.highlight_view_evade(*view[0], enemy);
 			pt11.highlight_view(*view[0], enemy);
+			
 
 			if (AI_player == 1)
 			{
@@ -293,7 +316,8 @@ int main()
 			{
 				pt11.manual_set(pw_l, pw_r, pw_laser, laser);		//Control the bot. A W D for laser, arrows for bot
 				//pt11.scout(pw_l, pw_r, pw_laser, laser);
-				pt11.attack(pw_l, pw_r, pw_laser, laser);
+				//pt11.attack(pw_l, pw_r, pw_laser, laser);
+				//pt11.evade(pw_l, pw_r, pw_laser, laser);
 			}
 			/*
 			enemy.collision_points(*view[0]);
@@ -308,12 +332,12 @@ int main()
 			}
 			else
 			{
-				enemy.manual_set(pw_l_o, pw_r_o, pw_laser_o, laser_o);
+				//enemy.manual_set(pw_l_o, pw_r_o, pw_laser_o, laser_o);
 				//enemy.attack(pw_l_o, pw_r_o, pw_laser_o, laser_o);
 			}
 
-			view[0]->set_processing(3);	//Without this, we would see a thresholded greyscale image of rgb, this brings the original image back.
-			view[0]->processing();
+			//view[0]->set_processing(3);	//Without this, we would see a thresholded greyscale image of rgb, this brings the original image back.
+			//view[0]->processing();
 
 			for (int i = 0; i < 4; i++)
 			{
@@ -321,8 +345,8 @@ int main()
 			}
 
 			////pt11.m_runNet(pw_l, pw_r, laser);		//Also not used, results inconsistent
-			view[0]->set_processing(12);			//Set and Prep for original copy
-			view[0]->processing();				//Make a copy of the rgb image
+			//view[0]->set_processing(12);			//Set and Prep for original copy
+			//view[0]->processing();				//Make a copy of the rgb image
 			/*
 			view[0]->set_processing(0);			//Set and Prep for original copy
 			view[0]->processing();				//Make a copy of the rgb image

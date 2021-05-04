@@ -42,6 +42,9 @@ private:
 	bool is_there_obstacle;
 	double distance_enemy1, distance_enemy2, distance_enemy_avg;
 
+	bool attack_trigger;
+	bool evade_trigger;
+
 	int Lx[8];
 	int Ly[8];
 	int LL[8];
@@ -80,16 +83,22 @@ public:
 	void is_obstacle_before_enemy(int arrx[], int arry[], PT11 enemy, Camera& view);
 	void label_enemy(Camera& view, PT11 enemy);
 	void fill_wheel_void(Camera& view);	//Combines front wheel objects with front circle object into one object
+	void fill_wheel_void_rgb(Camera& view);	//Combines front wheel objects with front circle object into one object
 
-	void m_runNet(int& pw_l, int& pw_r, int& laser);
+	//void m_runNet(int& pw_l, int& pw_r, int& laser);
 	//void NeuroNet(int pw_l, int pw_r);
 	void NeuroLearn(int& pw_l, int& pw_r, int& laser, int &trial_number);
 
 	void scout(int& pw_l, int& pw_r, int& pw_laser, int& laser);
 	void attack(int& pw_l, int& pw_r, int& pw_laser, int& laser);
+	void evade(int& pw_l, int& pw_r, int& pw_laser, int& laser);
 
 	void highlight_view(Camera& view, PT11 enemy);
-	void hide_shadows(int arrx[], int arry[], Camera& view, double theta_index, int& radar_radius, int radius_limit, bool& enemy_trigger, PT11 enemy, int radius_jump);
+	void highlight_view_evade(Camera& view, PT11 enemy);
+
+	void hide_shadows(int arrx[], int arry[], Camera& view, double theta_index, int& radar_radius, int radius_limit, bool& enemy_trigger, PT11 enemy, int radius_jump, bool& shadow_zone_trigger);
+	void hide_shadows_evade(int arrx[], int arry[], Camera& view, double theta_index,int& radar_minimum, int& radar_radius, int radius_limit, bool& enemy_trigger, PT11 enemy, int radius_jump);
+
 	void VFF_section_modifier(double theta_index, double offset, double range, int& radius_limit, int limit_val, double& multiplier, double multiplier_val);
 
 	//Gurv functions:

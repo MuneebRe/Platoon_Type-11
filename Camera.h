@@ -11,6 +11,9 @@ private:
 	int processing_type;
 	static int count;
 	int t_value;
+	
+	int first_finder_x[4];
+	int first_finder_y[4];
 
 	int is, js;
 	double ic, jc;
@@ -43,10 +46,14 @@ public:
 
 	void red_filter();
 	void hue_filter(double min_hue, double max_hue, double min_sat, double max_sat, double min_val, double max_val);
+	void hue_filter2(double min_hue, double max_hue, double min_sat, double max_sat, double min_val, double max_val);
 
 	int sobel(image& a, image& mag, image& theta);
 
 	void draw_border();
+
+	int Area_of_label(i2byte label_selection);
+	void coordinate_finder(int pt_i[], int pt_j[]);
 
 	~Camera();
 };

@@ -1,5 +1,6 @@
 #define KEY(c) ( GetAsyncKeyState((int)(c)) & (SHORT)0x8000 )
 
+
 using namespace std;
 
 #include <cstdio>
@@ -162,6 +163,19 @@ void Camera::processing()
 		break;
 	case 12:
 		copy(original, rgb);		//Bring back the original image to rgb
+		break;
+	case 13:
+		hue_filter2(2, 9, 0.55, 0.75, 150, 250);			//Red Filter
+		break;
+	case 14:
+		hue_filter2(20, 40, 0.4, 0.6, 200, 260);		//Orange filter
+		break;
+
+	case 15:
+		hue_filter2(145, 165, 0.5, 0.70, 170, 190);	//Green Filter
+		break;
+	case 16:
+		hue_filter2(190, 210, 0.7, 0.85, 218, 235);		//Blue Filter
 		break;
 	}
 	
@@ -638,6 +652,142 @@ void Camera::hue_filter(double min_hue, double max_hue, double min_sat, double m
 	//cout << "\n ic = " << ic << " , jc = " << jc << endl;
 }
 
+void Camera::hue_filter2(double min_hue, double max_hue, double min_sat, double max_sat, double min_val, double max_val)
+{	//Re-made the "find blue object centroid" assignment but with HSV range 
+
+	/*
+	for (int i = 0; i < 4; i++)
+	{
+		draw_point_rgb(rgb, first_finder_x[i], first_finder_y[i], 255, 0, 0);
+	}
+	*/
+
+	// always initialize summation variables
+	double mi, mj, m, eps;
+	mi = mj = m = 0.0;
+	eps = 1.0e-10;
+	int k;
+	ibyte R, G, B;
+	ibyte* p, * pc;
+	double hue, sat, value;
+
+	p = original.pdata;
+
+	//copy(original, rgb);
+
+
+	
+
+	for (int i = 0; i < 4; i++)
+	{
+		k = first_finder_x[i] + width * first_finder_y[i];
+		pc = p + 3 * k; // pointer to the kth pixel (3 bytes/pixel)
+
+		B = *pc;
+		G = *(pc + 1);
+		R = *(pc + 2);
+
+		calculate_HSV(R, G, B, hue, sat, value);
+
+		
+		if ((hue < max_hue) && (hue >= min_hue) && (sat >= min_sat) && (sat < max_sat) && (value < max_val) && (value >= min_val)) {
+
+			//draw_point_rgb(rgb, first_finder_x[i], first_finder_y[i], 255, 0, 0);
+
+			ic = first_finder_x[i];
+			jc = first_finder_y[i];
+
+			break;
+		}
+		else
+		{
+			ic = 5;
+			jc = 5;
+		}
+	
+	}
+
+	//cout << (int)R << "   " << (int)G << "    " << (int)B << endl;
+
+	/*
+
+	for (int j = 0; j < height; j++) { // j coord
+
+		for (int i = 0; i < width; i++) { // i coord
+
+			k = i + width * j;
+			pc = p + 3 * k; // pointer to the kth pixel (3 bytes/pixel)
+
+			B = *pc;
+			G = *(pc + 1);
+			R = *(pc + 2);
+
+			calculate_HSV(R, G, B, hue, sat, value);
+		}
+	}
+	*/
+
+
+
+	/*
+
+	for (int j = 0; j < height; j++) { // j coord
+
+		for (int i = 0; i < width; i++) { // i coord
+
+			k = i + width * j;
+			pc = p + 3 * k; // pointer to the kth pixel (3 bytes/pixel)
+
+			B = *pc;
+			G = *(pc + 1);
+			R = *(pc + 2);
+
+			calculate_HSV(R, G, B, hue, sat, value);
+
+			// find blue pixels and calculate their centroid stats //8 0.6 0.6
+			if ((hue < max_hue) && (hue >= min_hue) && (sat >= min_sat) && (sat < max_sat) && (value < max_val) && (value >= min_val)) {
+				//if (hue < 8 && hue > 0 && sat > 0.6 && sat < 1.0 && value > 150 && value < 255) {
+				R = 255;
+				G = 255;
+				B = 255;
+
+				// highlight blue pixels in the image
+				*(pc + 0) = B;
+				*(pc + 1) = G;
+				*(pc + 2) = R;
+
+				// to calculate the centroid you need to calculate mk 
+				// - the mass of each pixel k
+
+				// mk = volume * density
+				// mk = (pixel area) * (blue intensity)
+				// mk = (blue intensity) = B
+				// since (pixel area) = 1 pixel x 1 pixel = 1
+
+				// calculate total mass m = sum (mk)
+				m += B;
+
+				// calculate total moments in the i and j directions
+				mi += i * B; // (i moment of mk) = mk * i
+				mj += j * B; // (j moment of mk) = mk * j
+
+			} // end if
+
+		} // end for i
+
+	} // end for j
+	
+	eps = 1.0e-10; // small constant to protect against /0
+	ic = mi / (m + eps);
+	jc = mj / (m + eps);
+	*/
+
+
+
+	//draw_point_rgb(rgb, ic, jc, 0, 255, 0);
+
+	//cout << "\n ic = " << ic << " , jc = " << jc << endl;
+}
 
 int Camera::sobel(image& a, image& mag, image& theta)	//Full copy paste from the lecture material
 {
@@ -799,4 +949,256 @@ void Camera::draw_border()
 	{
 		draw_point_rgb(rgb, 0, i, 0, 0, 0);
 	}
+}
+
+int Camera::Area_of_label(i2byte label_selection)
+{
+	int k;
+	ibyte R, G, B;
+	double hue, sat, value;
+
+	
+	int case_number;
+
+	i2byte* pl;
+
+	ibyte* p, * pc;
+
+	i2byte nlabel;
+
+	p = rgb.pdata;
+
+	int Area = 0;
+
+	//label_image(a, label, nlabels);
+
+	//draw_point_rgb(rgb, is, js, 0, 255, 0);
+
+	if (is < 0) is = 0;
+	if (is > b.width - 1) is = b.width - 1;
+	if (js < 0) js = 0;
+	if (js > b.height - 1) js = b.height - 1;
+
+	pl = (i2byte*)label.pdata;
+	
+	for (int i = 0; i < label.width; i++)
+	{
+		for (int j = 0; j < label.height; j++)
+		{
+			nlabel = *(pl + j * label.width + i);
+			if (nlabel == label_selection) Area++;
+
+		}
+	}
+
+	if (Area < 1900 && Area > 1800 )	//Front
+	{
+		centroid(a, label, label_selection, ic, jc);
+	}
+
+	if (Area > 1500 && Area < 1700)		//Back
+	{
+		centroid(a, label, label_selection, ic, jc);
+	}
+
+	k = ic + width * jc;
+	pc = p + 3 * k; // pointer to the kth pixel (3 bytes/pixel)
+
+	B = *pc;
+	G = *(pc + 1);
+	R = *(pc + 2);
+
+	calculate_HSV(R, G, B, hue, sat, value);
+
+	//if ((hue < max_hue) && (hue >= min_hue) && (sat >= min_sat) && (sat < max_sat) && (value < max_val) && (value >= min_val)) {
+
+
+
+	cout << ic << "   " << jc << endl;
+	
+
+	//cout << Area << endl;
+
+	return Area;
+}
+
+void Camera::coordinate_finder(int pt_i[], int pt_j[])
+{
+
+	int k;
+	ibyte R, G, B;
+	double hue, sat, value;
+
+	int circle_index = 0;
+	int label_interest[100];
+
+	int case_number;
+
+	i2byte* pl;
+
+	ibyte* p,*p2, * pc;
+
+	i2byte nlabel;
+
+	p = rgb.pdata;
+	p2 = original.pdata;
+
+	int Area = 0;
+
+	//label_image(a, label, nlabels);
+
+	//draw_point_rgb(rgb, is, js, 0, 255, 0);
+
+	if (is < 0) is = 0;
+	if (is > b.width - 1) is = b.width - 1;
+	if (js < 0) js = 0;
+	if (js > b.height - 1) js = b.height - 1;
+
+	//pl = (i2byte*)label.pdata;
+
+	i2byte r;
+	int remember_i = 0;
+	int remember_j = 0;
+
+	for (r = 0; r <= nlabels; r++)
+	{
+		bool flag1 = 0;
+		//cout << "INSIDE I " << endl;
+
+		Area = 0;
+
+		for (int i = 0; i < label.width; i++)
+		{
+			if (flag1 == 1) break;
+			
+
+			for (int j = 0; j < label.height; j++)
+			{
+				pl = (i2byte*)label.pdata;
+				nlabel = *(pl + j * label.width + i);
+				if (nlabel == r)
+				{
+					Area++;
+					//cout << r << "    " <<  Area << endl;
+				}
+
+				if (Area > 3000)
+				{
+					flag1 = 1;
+					break;
+				}
+				
+				//cout << nlabel << endl;
+				
+				
+				
+				/*
+				if (r == 9)
+				{
+					centroid(a, label, r, ic, jc);
+					draw_point_rgb(rgb, ic, jc, 255, 255, 0);
+					flag1 = 1;
+					
+					break;
+				}
+				*/
+				/*
+				if (Area > 0 && Area < 5)
+				{
+					centroid(a, label, r, ic, jc);
+					draw_point_rgb(rgb, ic, jc, 255, 255, 0);
+					//continue;
+					//cout << (int)nlabel << endl;
+				}
+				*/
+				/*
+				
+				if (Area > 1500 && Area < 1800) //Circle figure identified
+				{
+					centroid(a, label, (i2byte)r, ic, jc);
+
+					
+					k = ic + width * jc;
+					pc = p2 + 3 * k; // pointer to the kth pixel (3 bytes/pixel)
+
+					B = *pc;
+					G = *(pc + 1);
+					R = *(pc + 2);
+
+					calculate_HSV(R, G, B, hue, sat, value);
+
+					if ((hue < max_hue) && (hue >= min_hue) && (sat >= min_sat) && (sat < max_sat) && (value < max_val) && (value >= min_val))
+					{
+							
+						cout << "BINGO" << endl;
+						break;
+					}
+					
+					cout << hue << "   " << sat << "   " << value << "    " << endl;
+
+					
+
+					
+				}
+				
+				*/
+
+			}
+		}
+		//cout << r << endl;
+
+
+		if (Area > 1000 && Area < 3000)
+		{
+			//cout << r << "   --- " << Area << endl;
+			label_interest[circle_index] = r;
+			circle_index++;
+		}
+
+	}
+
+	for (int r = 0; r < circle_index; r++)
+	{
+		//cout << r << "    " << label_interest[r] << endl;
+		bool flag2 = 0;
+
+		for (int i = 0; i < label.width; i = i + 5)
+		{
+			if (flag2 == 1) break;
+
+
+			for (int j = 0; j < label.height; j = j + 5)
+			{
+				pl = (i2byte*)label.pdata;
+				nlabel = *(pl + j * label.width + i);
+
+				if (nlabel == label_interest[r])
+				{
+					centroid(a, label, nlabel, ic, jc);
+
+					//draw_point_rgb(rgb, ic, jc, 255, 255, 0);
+					//cout << r << "   " << ic << "    " << jc << endl;
+
+
+					first_finder_x[r] = ic;
+					first_finder_y[r] = jc;
+
+					flag2 = 1;
+					break;
+					
+				}
+				else
+				{
+					first_finder_x[r] = 100;
+					first_finder_y[r] = 100;
+				}
+
+			}
+
+		}
+	}
+	
+	
+	
+
 }

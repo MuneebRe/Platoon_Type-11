@@ -99,6 +99,19 @@ PT11::PT11(Camera& view)
 	allocate_image(safezone_label);		//Houses the labelled image of safezone_greyscale, labelling the safe zones
 	allocate_image(radar_a);			//Used to erode/dilate binary image safezone_greyscale
 	allocate_image(radar_b);
+
+	/*IS THAT FROM MY VFF?
+	radar_label.type = LABEL_IMAGE;
+	radar_label.width = 640;
+	radar_label.height = 480;
+
+	allocate_image(radar_rgb);
+	allocate_image(radar_greyscale);
+	allocate_image(radar_label);
+	*/
+	attack_trigger = 0;
+	evade_trigger = 0;
+
 }
 
 void PT11::init_neural()	//REF1-4 Initialize everytime the simulations starts over
@@ -614,7 +627,6 @@ void PT11::check_collision(int arrx[], int arry[], Camera &view, int i)
 		}
 	}
 	
-	//cout << "\nAAAAAAAAAAAAAAAAAAAAAAAAA" << endl;
 	//cout << collision_state[0] << "\t" << collision_t_flag[0] << "\t" << collision_t1[0] << "\t" << collision_t2[0] << "\t" << collision_dt[0] << endl;
 
 	//cout << collision_state[0] << "\t" << collision_state[1] << "\t" << collision_state[2] << "\t" << collision_state[3] << endl;
@@ -953,6 +965,9 @@ void PT11::scout(int& pw_l, int& pw_r, int& pw_laser, int& laser)
 
 void PT11::attack(int& pw_l, int& pw_r, int& pw_laser, int& laser)
 {
+	attack_trigger = 1;
+	evade_trigger = 0;
+
 	int u[2] = { 0,0 };
 
 	static double time1 = 0;
@@ -1126,6 +1141,168 @@ void PT11::attack(int& pw_l, int& pw_r, int& pw_laser, int& laser)
 	*/
 }
 
+void PT11::evade(int& pw_l, int& pw_r, int& pw_laser, int& laser)
+{
+	evade_trigger = 1;
+	attack_trigger = 0;
+
+	int u[2] = { 0,0 };
+
+	static double time1 = 0;
+	static double time2 = 0.1;
+	double time_delta;
+	time2 = high_resolution_time();
+	time_delta = time2 - time1;
+	time1 = time2;
+
+	double kp_PID = 10000;
+	double kd_PID = 30;
+	double ki_PID = 1;
+
+	static double error = 0;
+	static double old_error = 0;
+	static double error_dot = 0;
+	static double int_error = 0;
+
+	static double theta_delta;
+	int aim_dir;
+
+	theta_target_delta_fix(VFF_theta, theta_delta);
+
+	if (distance_enemy_avg < 150)
+	{
+		if (target_delta1 > target_delta2)
+		{
+			error = target_delta2;
+		}
+		else if (target_delta1 < target_delta2)
+		{
+			error = target_delta1;
+		}
+	}
+	else
+	{
+		error = theta_delta;
+	}
+	error = theta_delta;
+	//fout << VFF_mag << endl;
+	error_dot = (error - old_error) / time_delta;
+	int_error = int_error + error * time_delta;
+	u[1] = kp_PID * error + ki_PID * int_error + kd_PID * error_dot;
+
+	if (u[1] > 400) u[1] = 400;
+	if (u[1] < -400) u[1] = -400;
+
+	old_error = error;
+
+	double error_limit = 1.00;
+
+	if (abs(error) <= error_limit)
+	{
+		u[0] = 500;
+	}
+	if (abs(error) > error_limit) {
+		u[0] = 0;
+	}
+
+
+
+	if (collision_state[0] == 1) u[0] = -100;
+	if (collision_state[2] == 1) u[0] = 100;
+
+
+	if (collision_state[0] == 1) u[0] = -100;
+	//if (collision_state[1] == 1) u[1] = 100;
+	//if (collision_state[3] == 1) u[1] = -100;
+	if (collision_state[2] == 1) u[0] = 300;
+
+	
+	if (VFF_mag < 40000)
+	{
+		u[0] = 500;
+	}
+	else
+	{
+		u[0] = 0;
+	}
+	
+	//cout << VFF_mag << endl;
+	
+
+	this->pw_l = 1500 + u[1] - u[0];
+	this->pw_r = 1500 + u[1] + u[0];
+
+	//cout << this->pw_l << "\t" << this->pw_r << endl;
+	//cout << distance_log[0] << endl;
+	//cout << distance_log[0] << "   " << target_state << "   " <<  abs(error) << endl;
+
+
+	pw_r = this->pw_r;
+	pw_l = this->pw_l;
+	laser = 0;
+
+
+	/*
+	int u[2];
+
+	u[0] = 0;
+	u[1] = 0;
+
+	double theta_delta;
+	int aim_dir;
+
+	theta_target_delta_fix(VFF_theta, theta_delta, aim_dir);
+
+
+	if (aim_dir == -1)
+	{
+		u[1] = 450;
+	}
+	else if (aim_dir == 1)
+	{
+		u[1] = -450;
+	}
+
+	if (theta_delta < 0.15) u[0] = 500;
+
+	if (VFF_mag < 2000) u[0] = 500;
+
+	//if (collision_state[2] == 1) action = 2;
+
+	cout << VFF_theta << "   " << VFF_mag << endl;
+
+	//cout << theta_delta << endl;
+
+
+	this->pw_l = 1500 + u[1] - u[0];
+	this->pw_r = 1500 + u[1] + u[0];
+
+	//cout << this->pw_l << "\t" << this->pw_r << endl;
+
+	pw_r = this->pw_r;
+	pw_l = this->pw_l;
+	laser = 0;
+	*/
+	/*
+	switch (action)
+	{
+	case 0:					//Turn left
+		pw_l = 2000;
+		pw_r = 2000;
+		break;
+	case 1:					//Turn right
+		pw_l = 1000;
+		pw_r = 1000;
+		break;
+	case 2:					//Go Straight
+		pw_l = 1000;
+		pw_r = 2000;
+		break;
+	}
+	*/
+}
+
+
 void PT11::highlight_view(Camera& view, PT11 enemy)
 {
 	bool flag_draw = 1;
@@ -1139,16 +1316,31 @@ void PT11::highlight_view(Camera& view, PT11 enemy)
 	double vector_y = 0;
 	double counter_vector_x = 0;
 	double counter_vector_y = 0;
-	bool enemy_trigger = 0;
 	double multiplier;
 	double enemy_multiplier;
-
+	bool enemy_trigger;
+	double shadow_multiplier;
+	bool shadow_zone_trigger;
+	
 	while (theta_index < (2 * M_PI))
 	{
 		radius_limit = 200;
 		multiplier = 1;
-		enemy_multiplier = -20.0;
-		bool enemy_trigger = 0;
+
+		if (attack_trigger == 1)
+		{
+			enemy_multiplier = -20.00;
+		}
+		else
+		{
+			enemy_multiplier = 1.00;
+		}
+
+		shadow_multiplier = -20.0;
+
+		enemy_trigger = 0;
+		shadow_zone_trigger = 0;
+
 		theta_index = theta_index + theta_jump;
 
 		double sym_offset;
@@ -1191,12 +1383,13 @@ void PT11::highlight_view(Camera& view, PT11 enemy)
 			//draw_point_rgb(view.return_image(), arrx[radius], arry[radius], 255, 0, 0);
 		}
 
-		hide_shadows(arrx, arry, view, theta_index, radar_radius, radius_limit, enemy_trigger, enemy, radius_jump);
+		hide_shadows(arrx, arry, view, theta_index, radar_radius, radius_limit, enemy_trigger, enemy, radius_jump, shadow_zone_trigger);
 		//cout << radar_radius << endl;
 
 
 		for (int radius = radar_minimum; radius < radar_radius; radius+=radius_jump)
 		{
+
 			if (arrx[radius] < 0 || arrx[radius] > view.return_a().width || arry[radius] < 0 || arry[radius] > view.return_a().height)
 			{
 				break;
@@ -1206,6 +1399,12 @@ void PT11::highlight_view(Camera& view, PT11 enemy)
 			if (enemy_trigger == 1)
 			{
 				multiplier = enemy_multiplier;
+				if (flag_draw == 1) draw_point_rgb(view.return_image(), arrx[radius], arry[radius], 0, 255, 255);
+			}
+
+			if (shadow_zone_trigger == 1)
+			{
+				multiplier = shadow_multiplier;
 				if (flag_draw == 1) draw_point_rgb(view.return_image(), arrx[radius], arry[radius], 0, 255, 255);
 			}
 		}
@@ -1252,6 +1451,189 @@ void PT11::highlight_view(Camera& view, PT11 enemy)
 	}
 }
 
+void PT11::highlight_view_evade(Camera& view, PT11 enemy)
+{
+	bool flag_draw = 0;
+	bool flag_draw_shadow = 1;
+	int radar_radius = 0;
+	double theta_index = 0;
+	double theta_jump = 0.06;
+	int radar_minimum;
+	int radius_jump = 5;
+	int radius_limit;
+	double vector_x = 0;
+	double vector_y = 0;
+	double counter_vector_x = 0;
+	double counter_vector_y = 0;
+	bool enemy_trigger = 0;
+	double multiplier;
+	double enemy_multiplier;
+	bool shadow_zone_trigger = 0;
+	double shadow_multiplier;
+
+	int Area = 0;
+	int Ax = 0;
+	int Ay = 0;
+
+
+	const int shadow_max = 50;
+	int shadow_x[shadow_max];
+	int shadow_y[shadow_max];
+	int shadow_A[shadow_max];
+
+	int shadow_index = 0;
+
+	//int full_shadow_centroid_index = 0;
+
+
+	while (theta_index < (2 * M_PI))
+	{
+		if (evade_trigger == 1)
+		{
+			flag_draw_shadow = 1;
+		}
+		else
+		{
+			flag_draw_shadow = 0;
+		}
+
+		radar_minimum = 0;
+		radius_limit = 500;
+		multiplier = 1;
+		enemy_multiplier = 1.0;
+		shadow_multiplier = -300.0;
+		enemy_trigger = 0;
+		shadow_zone_trigger = 0;
+		theta_index = theta_index + theta_jump;
+
+		double sym_offset;
+		double sym_size;
+		double sym_radius;
+		double sym_multi;
+
+		/*
+
+		double temp = 0.5;
+		sym_offset = M_PI/2 + temp /2.0;
+		sym_size = temp;
+		sym_radius = 70;
+		sym_multi = 1.0;
+		VFF_section_modifier(theta_index, sym_offset, sym_size, radius_limit, sym_radius, multiplier, sym_multi);
+		VFF_section_modifier(theta_index, 2*M_PI - sym_offset, sym_size, radius_limit, sym_radius, multiplier, sym_multi);
+
+
+		sym_offset = M_PI;
+		sym_size = 0.5;
+		sym_radius = 130;
+		sym_multi = 1.0;
+		VFF_section_modifier(theta_index, sym_offset, sym_size, radius_limit, sym_radius, multiplier, sym_multi);
+		//VFF_section_modifier(theta_index, 2 * M_PI - sym_offset, sym_size, radius_limit, sym_radius, multiplier, sym_multi);
+		*/
+
+		double theta_bracket_1 = theta + 0 + M_PI + 1.0;
+		double theta_bracket_2 = theta + 0 + M_PI - 1.0;
+
+		radar_radius = 0;
+		int* arrx = new int[radius_limit];		//Dynamic memory, can change number of points interested in using
+		int* arry = new int[radius_limit];		//Kinda like resolution. More points can make it a line
+
+		for (int radius = 0; radius < radius_limit; radius += radius_jump)
+		{
+
+			arrx[radius] = enemy.x1 + radius * cos(theta_index);
+			arry[radius] = enemy.y1 + radius * sin(theta_index);
+
+			//draw_point_rgb(view.return_image(), arrx[radius], arry[radius], 255, 0, 0);
+		}
+
+		hide_shadows_evade(arrx, arry, view, theta_index, radar_minimum, radar_radius, radius_limit, enemy_trigger, enemy, radius_jump);
+		//cout << radar_radius << endl;
+		//cout << shadow_zone_trigger << endl;
+
+		//if (radar_minimum > radar_radius) radar_minimum = radar_radius;
+
+		for (int radius = radar_minimum; radius < radar_radius; radius += radius_jump)
+		{
+			
+			if (arrx[radius] < 0 || arrx[radius] > view.return_a().width || arry[radius] < 0 || arry[radius] > view.return_a().height)
+			{
+				continue;
+			}
+
+			if (flag_draw == 1) draw_point_rgb(view.return_image(), arrx[radius], arry[radius], 255, 0, 0);
+			Area++;
+
+			Ax += 1 * arrx[radius];
+			Ay += 1 * arry[radius];
+
+
+		}
+
+
+		//if (Area == 0) Area = 1;
+
+		int centroid_x;
+		int centroid_y;
+
+		if (Area != 0 && Area < 10000)
+		{
+
+			centroid_x = Ax / Area;
+			centroid_y = Ay / Area;
+
+			//cout << Area << endl;
+
+			int box_length = 40;
+			int tolerance = 30;
+
+			for (int i = -box_length / 2; i < box_length; i++)
+			{
+				for (int j = -box_length / 2; j < box_length; j++)
+				{
+					if (centroid_x + i < 0 + tolerance || centroid_x + i > view.return_a().width - tolerance || centroid_y + j < 0 + tolerance || centroid_y + j > view.return_a().height - tolerance)
+					{
+						continue;
+					}
+					else
+					{
+						if (flag_draw_shadow == 1) draw_point_rgb(view.return_image(), centroid_x + i, centroid_y + j, 255, 0, 255);
+					}
+					
+				}
+			}
+
+			//if (flag_draw == 1) draw_point_rgb(view.return_image(), centroid_x, centroid_y, 0, 255, 0);
+
+			shadow_x[shadow_index] = centroid_x;
+			shadow_y[shadow_index] = centroid_y;
+			//shadow_A[shadow_index] = Area;
+			shadow_A[shadow_index] = 1;
+			//cout << Area << endl;
+			shadow_index++;
+			//if (shadow_index > shadow_max) shadow_index = 0;
+		}
+
+		Area = 0;
+		Ax = 0;
+		Ay = 0;
+
+		//int mid_point = (radar_minimum + radar_radius) / 2;
+		//if (flag_draw == 1) draw_point_rgb(view.return_image(), arrx[mid_point], arry[mid_point], 0, 255, 0);
+
+		vector_x += radar_radius * cos(theta_index) * multiplier;
+		vector_y += radar_radius * sin(theta_index) * multiplier;
+
+		counter_vector_x += radius_limit * cos(theta_index) * multiplier;
+		counter_vector_y += radius_limit * sin(theta_index) * multiplier;
+
+		delete[]arrx;
+		delete[]arry;
+
+	}
+
+
+}
+
 
 void PT11::VFF_section_modifier(double theta_index, double offset, double range, int& radius_limit, int limit_val, double& multiplier, double multiplier_val)
 {
@@ -1285,7 +1667,7 @@ void PT11::VFF_section_modifier(double theta_index, double offset, double range,
 }
 
 
-void PT11::hide_shadows(int arrx[], int arry[], Camera& view, double theta_index, int& radar_radius, int radius_limit, bool& enemy_trigger, PT11 enemy, int radius_jump)
+void PT11::hide_shadows(int arrx[], int arry[], Camera& view, double theta_index, int& radar_radius, int radius_limit, bool& enemy_trigger, PT11 enemy, int radius_jump, bool& shadow_zone_trigger)
 {
 	int what_label;
 
@@ -1296,9 +1678,9 @@ void PT11::hide_shadows(int arrx[], int arry[], Camera& view, double theta_index
 	pa = view.return_a().pdata;
 
 	int* k = new int[radius_limit];	//Can vary length of point series for collision accuracy
-	
 
-	for (int i2 = 0; i2 < radius_limit; i2+= radius_jump)	//For each dot on the line of points, find position based on 1D image reference
+
+	for (int i2 = 0; i2 < radius_limit; i2 += radius_jump)	//For each dot on the line of points, find position based on 1D image reference
 	{
 		if (arrx[i2] > 0 && arrx[i2] < view.return_a().width && arry[i2] > 0 && arry[i2] < view.return_a().height)
 		{
@@ -1325,14 +1707,13 @@ void PT11::hide_shadows(int arrx[], int arry[], Camera& view, double theta_index
 		{
 			continue;
 		}
-		
-		
-		if ((what_label == enemy.label_nb_1 || what_label == enemy.label_nb_2) )
+
+
+		if ((what_label == enemy.label_nb_1 || what_label == enemy.label_nb_2))
 		{
-			
 			enemy_trigger = 1;
 		}
-		
+
 		//cout << (int)pa[k[i2]] << "\t" << i2 << endl;
 		if (pa[k[i2]] == 255)
 		{
@@ -1345,14 +1726,158 @@ void PT11::hide_shadows(int arrx[], int arry[], Camera& view, double theta_index
 		{
 			radar_radius = radius_limit;
 			//distance_log[i] = Ln[i];
-			
+
 		}
+	}
+
+
+	int k2;
+	ibyte R, G, B;
+	ibyte* p, * pc;
+
+	p = view.return_image().pdata;
+
+	for (int i2 = 0; i2 < radius_limit; i2 += radius_jump)
+	{
+		k2 = arrx[i2] + view.return_image().width * arry[i2];
+		pc = p + 3 * k2; // pointer to the kth pixel (3 bytes/pixel)
+
+		B = *pc;
+		G = *(pc + 1);
+		R = *(pc + 2);
+
+		if (arrx[i2] < 640 && arrx[i2] > 0 && arry[i2] < 480 && arry[i2] > 0)
+		{
+			if ((B == 255) && (R == 255) && (G == 0))
+			{
+				radar_radius = i2;
+				//cout << i2 << endl;
+				shadow_zone_trigger = 1;
+				//cout << shadow_zone_trigger << endl;
+				//cout << "AAAAAAAAAAAAAAAA HIDE!" << endl;
+			}
+		}
+		
+	}
+	delete[]k;
+
+}
+
+
+void PT11::hide_shadows_evade(int arrx[], int arry[], Camera& view, double theta_index, int& radar_minimum, int& radar_radius, int radius_limit, bool& enemy_trigger, PT11 enemy, int radius_jump)
+{
+	int what_label;
+
+	copy(view.return_image(), view.return_a());
+
+	ibyte* pa;
+
+	pa = view.return_a().pdata;
+
+	int* k = new int[radius_limit];	//Can vary length of point series for collision accuracy
+
+
+	for (int i2 = 0; i2 < radius_limit; i2 += radius_jump)	//For each dot on the line of points, find position based on 1D image reference
+	{
+		if (arrx[i2] > 0 && arrx[i2] < view.return_a().width && arry[i2] > 0 && arry[i2] < view.return_a().height)
+		{
+			k[i2] = arrx[i2] + view.return_a().width * arry[i2];
+		}
+		else {
+			k[i2] = 1 + view.return_a().width;
+		}
+	}
+
+	bool transition_trigger = 0;
+
+	for (int i2 = 0; i2 < radius_limit; i2 += radius_jump)	//If either point has 255 at pointer, turn on collision state
+	{
+
+		double tol = 5;
+
+		if (arrx[i2] < 0 + tol || arrx[i2] > view.return_a().width - tol || arry[i2] < 0 + tol || arry[i2] > view.return_a().height - tol)
+		{
+			//radar_radius = i2;
+			break;
+		}
+
+		/*
+
+		if (arrx[i2] < 0 || arrx[i2] > view.return_a().width || arry[i2] < 0 || arry[i2] > view.return_a().height)
+		{
+			pa[k[i2]] = 255;
+			//radar_radius = i2;
+			break;
+		}
+		*/
+		
+
+		what_label = view.label_at_coordinate(arrx[i2], arry[i2]);
+
+		if (what_label == enemy.label_nb_1 || what_label == enemy.label_nb_2)
+		{
+			continue;
+		}
+
+		if (what_label == label_nb_1 || what_label == label_nb_2)
+		{
+			continue;
+		}
+
+		/*
+
+		if ((what_label == enemy.label_nb_1 || what_label == enemy.label_nb_2))
+		{
+
+			enemy_trigger = 1;
+		}
+		*/
+
+		//cout << (int)pa[k[i2]] << "\t" << i2 << endl;
+
+		
+
+		if (pa[k[i2]] == 255)
+		{
+			transition_trigger = 1;
+			//cout << i2 << endl;
+			//distance_log[i] = i2;
+			//radar_radius = i2;
+			//break;
+		}
+
+		radar_minimum = 500;
+
+		if (pa[k[i2]] == 0 && transition_trigger == 1)
+		{
+			//radar_radius = i2;
+			radar_minimum = i2;
+			break;
+		}
+
+		if (pa[k[i2]] == 0)
+		{
+			//radar_radius = i2;
+			//radar_radius = radius_limit;
+			radar_radius = radius_limit;
+		}
+
+		/*
+		else
+		{
+			radar_radius = radius_limit;
+			//radar_minimum = radius_limit - 1;
+			//distance_log[i] = Ln[i];
+		}
+		*/
 	}
 
 
 	delete[]k;
 
 }
+
+
 
 void PT11::label_enemy(Camera& view, PT11 enemy)
 {
