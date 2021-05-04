@@ -951,6 +951,27 @@ void Camera::draw_border()
 	}
 }
 
+void Camera::overwrite_border_labels()
+{
+
+	for (int i = 0; i < rgb.width; i++)
+	{
+		draw_point(a, i, height, 0);
+	}
+	for (int i = rgb.height; i > 0; i--)
+	{
+		draw_point(a, i, height, 0);
+	}
+	for (int i = 0; i < rgb.width; i++)
+	{
+		draw_point(a, i, height, 0);
+	}
+	for (int i = 0; i < rgb.height; i++)
+	{
+		draw_point(a, i, height, 0);
+	}
+}
+
 int Camera::Area_of_label(i2byte label_selection)
 {
 	int k;

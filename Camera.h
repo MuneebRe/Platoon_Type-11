@@ -51,6 +51,7 @@ public:
 	int sobel(image& a, image& mag, image& theta);
 
 	void draw_border();
+	void overwrite_border_labels();
 
 	int Area_of_label(i2byte label_selection);
 	void coordinate_finder(int pt_i[], int pt_j[]);

@@ -1027,6 +1027,7 @@ void PT11::attack(int& pw_l, int& pw_r, int& pw_laser, int& laser)
 		u[0] = 0;
 	}
 
+	
 
 	if (target_state == 1)
 	{
@@ -1037,6 +1038,7 @@ void PT11::attack(int& pw_l, int& pw_r, int& pw_laser, int& laser)
 		if (collision_state[2] == 1) u[0] = 100;
 	}
 
+	
 	if (collision_state[0] == 1) u[0] = -100;
 	//if (collision_state[1] == 1) u[1] = 100;
 	//if (collision_state[3] == 1) u[1] = -100;
@@ -1216,7 +1218,23 @@ void PT11::evade(int& pw_l, int& pw_r, int& pw_laser, int& laser)
 	//if (collision_state[3] == 1) u[1] = -100;
 	if (collision_state[2] == 1) u[0] = 300;
 
+	cout << VFF_mag << endl;
 	
+	if (VFF_mag < 1500)
+	{
+		u[0] = 500;
+	}
+	else
+	{
+		u[0] = 0;
+	}
+
+	if (VFF_mag > 20000)
+	{
+		u[0] = 500;
+	}
+
+	/*
 	if (VFF_mag < 40000)
 	{
 		u[0] = 500;
@@ -1225,7 +1243,8 @@ void PT11::evade(int& pw_l, int& pw_r, int& pw_laser, int& laser)
 	{
 		u[0] = 0;
 	}
-	
+	*/
+
 	//cout << VFF_mag << endl;
 	
 
@@ -1336,7 +1355,7 @@ void PT11::highlight_view(Camera& view, PT11 enemy)
 			enemy_multiplier = 1.00;
 		}
 
-		shadow_multiplier = -20.0;
+		shadow_multiplier = -200.0;
 
 		enemy_trigger = 0;
 		shadow_zone_trigger = 0;
@@ -1454,7 +1473,7 @@ void PT11::highlight_view(Camera& view, PT11 enemy)
 void PT11::highlight_view_evade(Camera& view, PT11 enemy)
 {
 	bool flag_draw = 0;
-	bool flag_draw_shadow = 1;
+	bool flag_draw_shadow = 0;
 	int radar_radius = 0;
 	double theta_index = 0;
 	double theta_jump = 0.06;
@@ -1965,8 +1984,8 @@ void PT11::get_safe_zone(Camera& view, PT11& enemy, int pt_i[4], int pt_j[4]) {
 	line_array_j = new int[1000];
 	size = 0;
 
-	x0 = pt_i[2];		//This is the centroids of the "enemy" bot, the one that we are trying to evade
-	y0 = pt_j[2];
+	x0 = pt_i[1];		//This is the centroids of the "enemy" bot, the one that we are trying to evade
+	y0 = pt_j[1];
 
 
 	for (border_y = 0; border_y < 480; border_y++) {

@@ -56,7 +56,7 @@ int main()
 	y_obs[1] = 200; // pixels
 	size_obs[1] = 1.0; // scale factor 1.0 = 100% (not implemented yet)	
 
-	x_obs[2] = 300;// 135; // pixels
+	x_obs[2] = 3000;// 135; // pixels
 	y_obs[2] = 300;// 135; // pixels
 	size_obs[2] = 1.0; // scale factor 1.0 = 100% (not implemented yet)	
 	
@@ -125,7 +125,7 @@ int main()
 	static int trial_number = 0;
 	cout << "Trial Number " << trial_number << " begin!" << endl;
 	// set robot initial position (pixels) and angle (rad)
-	x0 = 150;
+	x0 = 400;
 	y0 = 400;
 	theta0 = 0;
 	//theta0 = 3.14159/4;
@@ -221,6 +221,7 @@ int main()
 			view[index]->acquire();					//Get RGB image
 			//view[0]->acquire();					//Get RGB image
 			view[index]->draw_border();
+
 			//view[0]->draw_border();
 			view[0]->set_processing(0);			//Set and Prep for original copy
 			view[0]->processing();				//Make a copy of the rgb image
@@ -290,8 +291,12 @@ int main()
 			pt11.fill_wheel_void(*view[0]);
 			enemy.fill_wheel_void(*view[0]);
 
+			view[0]->overwrite_border_labels();
+
 			view[0]->set_processing(11);		//Enable labeling processing and everything
 			view[0]->processing();				//Run process
+
+			
 			
 			pt11.label_nb_1 = (int)view[0]->label_at_coordinate(pt_i[2] + 15, pt_j[2] + 15);	//Labeling front wheel (since centroid is not touching object, 15 pixel offset ensures labelling)
 			pt11.label_nb_2 = (int)view[0]->label_at_coordinate(pt_i[0] + 15, pt_j[0] + 15);	//Labelling back wheel
@@ -300,11 +305,15 @@ int main()
 			enemy.label_nb_1 = (int)view[0]->label_at_coordinate(pt_i[1] + 15, pt_j[1] + 15);
 			enemy.label_nb_2 = (int)view[0]->label_at_coordinate(pt_i[3] + 15, pt_j[3] + 15);
 
+		
+			
 
-			//pt11.collision_points(*view[0]);	//Move view[0] object into pt11 function
+
+			pt11.collision_points(*view[0]);	//Move view[0] object into pt11 function
 			pt11.distance_sensor(*view[0], enemy);
 			pt11.find_target(enemy);
 			//pt11.highlight_view_evade(*view[0], enemy);
+			//pt11.get_safe_zone(*view[0], enemy, pt_i, pt_j);		//This function draws directly onto the latest RGB before its viewed on screen
 			pt11.highlight_view(*view[0], enemy);
 			
 
@@ -316,7 +325,7 @@ int main()
 			{
 				pt11.manual_set(pw_l, pw_r, pw_laser, laser);		//Control the bot. A W D for laser, arrows for bot
 				//pt11.scout(pw_l, pw_r, pw_laser, laser);
-				//pt11.attack(pw_l, pw_r, pw_laser, laser);
+				pt11.attack(pw_l, pw_r, pw_laser, laser);
 				//pt11.evade(pw_l, pw_r, pw_laser, laser);
 			}
 			/*
@@ -332,7 +341,7 @@ int main()
 			}
 			else
 			{
-				//enemy.manual_set(pw_l_o, pw_r_o, pw_laser_o, laser_o);
+				enemy.manual_set(pw_l_o, pw_r_o, pw_laser_o, laser_o);
 				//enemy.attack(pw_l_o, pw_r_o, pw_laser_o, laser_o);
 			}
 
@@ -357,7 +366,7 @@ int main()
 			//draw_point_rgb(view[0]->return_image(), pt_i[1], pt_j[1], 0, 0, 255);
 			//draw_point_rgb(view[0]->return_image(), pt_i[3], pt_j[3], 0, 0, 255);
 
-			pt11.get_safe_zone(*view[0], enemy, pt_i, pt_j);		//This function draws directly onto the latest RGB before its viewed on screen
+			//pt11.get_safe_zone(*view[0], enemy, pt_i, pt_j);		//This function draws directly onto the latest RGB before its viewed on screen
 
 			view[index]->view();	//View the the processed image MUNEEB REF 
 			//view[0]->view();
