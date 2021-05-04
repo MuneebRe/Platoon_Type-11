@@ -82,6 +82,7 @@ public:
 	void is_obstacle_before_enemy(int arrx[], int arry[], PT11 enemy, Camera& view);
 	void label_enemy(Camera& view, PT11 enemy);
 	void fill_wheel_void(Camera& view);	//Combines front wheel objects with front circle object into one object
+	void fill_wheel_void_rgb(Camera& view);	//Combines front wheel objects with front circle object into one object
 
 	//void m_runNet(int& pw_l, int& pw_r, int& laser);
 	//void NeuroNet(int pw_l, int pw_r);
@@ -104,6 +105,8 @@ public:
 	void draw_safe_zone(int* line_array_i, int* line_array_j, int size, Camera& view, PT11 enemy);		//Radar-Evasion: Radar processing function to determine safe zones and store inro rgb image for masking purposes
 	//Might remove identify_radar_objects() function! 
 	void identify_radar_objects(int pt_i[4], int pt_j[4], Camera& view); //Radar-Evasion: Radar processing function to distinguish between obstacles and robots - necessary for draw_safe_zone
+
+
 
 	~PT11();
 };

@@ -1202,7 +1202,7 @@ void PT11::evade(int& pw_l, int& pw_r, int& pw_laser, int& laser)
 		u[0] = 0;
 	}
 	
-	cout << VFF_mag << endl;
+	//cout << VFF_mag << endl;
 	
 
 	this->pw_l = 1500 + u[1] - u[0];
@@ -2237,8 +2237,6 @@ void PT11::get_safe_zone(Camera& view, PT11 enemy, int pt_i[4], int pt_j[4]) {
 	delete[] line_array_i;
 	delete[] line_array_j;
 }
-
-
 
 PT11::~PT11()
 {
