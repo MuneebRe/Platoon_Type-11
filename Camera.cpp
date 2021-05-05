@@ -28,6 +28,10 @@ int Camera::count = 0;
 
 Camera::Camera(bool state, int cam_number, int width, int height, int type, bool is_simulator, int processing_type)
 {
+	/*
+	Sets the camera size and type information to the camera objects,
+	and allocates different images for later processing
+	*/
 	this->cam_number = cam_number;
 	this->width = width;
 	this->height = height;
@@ -89,6 +93,11 @@ Camera::Camera(bool state, int cam_number, int width, int height, int type, bool
 
 void Camera::acquire()
 {
+	/*
+	Although no longer necessary, it's possible to use
+	more than one real camera alongside the simulation
+	*/
+
 	if (state == false) return;		//If the camera is disabled, do nothing
 
 	if (is_simulator == true)		//If it's a simulator, use the simulator image function
@@ -103,6 +112,12 @@ void Camera::acquire()
 
 void Camera::processing()
 {
+	/*
+	To use this function, the processing_type first needs to be set and then
+	processing( ) needs to be executed. The only reason that was necessary
+	was because the tracking function would need to do its own processing
+	which would affect the rgb image.
+	*/
 
 	switch (processing_type)
 	{
@@ -201,6 +216,7 @@ Camera::~Camera()
 
 int Camera::label_objects()		//Mostly code from the lecture, but used processing() so it's custom.
 {
+
 	int nlabels;
 
 	processing();
@@ -313,6 +329,10 @@ int Camera::select_object()		//Code from lecture, combined tracking with RGB to 
 
 i2byte Camera::label_at_coordinate(int is, int js)
 {
+	/*
+	Finds and returns the label number based on the coordinate set in the argument
+	*/
+
 	i2byte* pl;
 
 	ibyte* p, * pc;
@@ -1043,7 +1063,7 @@ int Camera::Area_of_label(i2byte label_selection)
 	return Area;
 }
 
-void Camera::coordinate_finder(int pt_i[], int pt_j[])
+void Camera::coordinate_finder()
 {
 
 	int k;

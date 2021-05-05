@@ -10,18 +10,15 @@ class PT11
 public:
 	int pw_l, pw_r, pw_laser, laser;
 
-	bool collision_state[4];
-	bool collision_t_flag[4];
+	bool collision_state[4];		//0 Front- 1 Right- 2 Back- 3 Left
+	bool collision_t_flag[4];		//Timer function on collision
 	double collision_t1[4];
 	double collision_t2[4];
 	double collision_dt[4];
 	double collision_dt_target[4];
 
-	bool net_mem[7];
-	double net_out[3];
-
-	int label_nb_1;
-	int label_nb_2;
+	int label_nb_1;		//Label of front side of robot
+	int label_nb_2;		//Label of back side of robot
 
 
 private:
@@ -29,11 +26,11 @@ private:
 	i2byte radar_nlabel;		//Radar-Evasion
 	int radar_nlabels; //Radar-Evasion: number of objects detected when thresholding radar greyscale
 	int safezone_centroid_x[50], safezone_centroid_y[50], safezone_array_index; //This will house the i and j value of the safe zones, which will be used to assess which is closer and for processing (50 assumes only 50 safezones max)
-	double x1,x2, dx, ddx;
-	double y1,y2, dy, ddy;
-	double theta, dtheta, ddtheta;
-	double theta_target1, theta_target2;
-	double target_delta1, target_delta2;
+	double x1,x2, dx, ddx;		//x1 front, x2 back
+	double y1,y2, dy, ddy;		//y1 front, y2 back
+	double theta, dtheta, ddtheta;	//Theta 0 - 2 PI
+	double theta_target1, theta_target2;	//Relative theta against front side enemy
+	double target_delta1, target_delta2;	//Relative theta against back side enemy
 	double trigger_range;
 	bool target_state;
 	bool state_laser;
@@ -45,6 +42,7 @@ private:
 	bool attack_trigger;
 	bool evade_trigger;
 
+	//Variables for distance sensors, 8 sides
 	int Lx[8];
 	int Ly[8];
 	int LL[8];
@@ -58,10 +56,14 @@ private:
 	Neural_Net* topology;
 	double trial_timer1, trial_timer2, trial_dt;
 
+	//Virtual Force Field system
 	double VFF_theta;
 	double VFF_mag;
 
+	bool disable_system;
+
 public:
+	//Muneeb functions:
 	PT11(Camera& view);
 	void init_neural();
 	void manual_set(int& pw_l, int& pw_r, int& pw_laser, int& laser);
@@ -83,10 +85,7 @@ public:
 	void is_obstacle_before_enemy(int arrx[], int arry[], PT11 enemy, Camera& view);
 	void label_enemy(Camera& view, PT11 enemy);
 	void fill_wheel_void(Camera& view);	//Combines front wheel objects with front circle object into one object
-	void fill_wheel_void_rgb(Camera& view);	//Combines front wheel objects with front circle object into one object
-
-	//void m_runNet(int& pw_l, int& pw_r, int& laser);
-	//void NeuroNet(int pw_l, int pw_r);
+	
 	void NeuroLearn(int& pw_l, int& pw_r, int& laser, int &trial_number);
 
 	void scout(int& pw_l, int& pw_r, int& pw_laser, int& laser);
@@ -101,6 +100,10 @@ public:
 
 	void VFF_section_modifier(double theta_index, double offset, double range, int& radius_limit, int limit_val, double& multiplier, double multiplier_val);
 
+	void enemy_out_of_map(PT11 enemy);
+
+	~PT11();
+
 	//Gurv functions:
 	void acquire_camera_image(Camera& view);   //Radar-Evasion: Assigns rgb, greyscale and label image to their respect PT11 objects for processing.
 	void get_safe_zone(Camera& view, PT11& enemy, int pt_i[4], int pt_j[4]);			//Radar-Evasion: Compiles all pixels into "vision" lines expanding from robot centroid for Radar processing
@@ -109,5 +112,4 @@ public:
 	void assess_safe_zone(Camera& view);
 	int radar_centroid(image& a, image& label, int nlabel, double& ic, double& jc, int& flag);
 	void radar_evasion(int pt_i[4], int pt_j[4], PT11& enemy); //Using VFF
-	~PT11();
 };

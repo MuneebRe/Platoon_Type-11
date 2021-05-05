@@ -33,12 +33,9 @@ using namespace std;
 
 PT11::PT11(Camera& view)
 {
-	pw_l = 1500;
-	pw_r = 1500;
-	for (int i = 0; i < 4; i++)
-	{
-		collision_state[i] = 0;
-	}
+	pw_l = 1500;		//Setup motors at 0
+	pw_r = 1500;		//Setup motors at 0
+
 	target_state = 0;
 	state_dir[0] = 0;
 	state_dir[1] = 0;
@@ -93,24 +90,17 @@ PT11::PT11(Camera& view)
 	radar_b.width = 640;
 	radar_b.height = 480;
 
-	allocate_image(radar_rgb);	//Houses RGB image with safezones drawn on
+	allocate_image(radar_rgb);	        //Houses RGB image with safezones drawn on
 	allocate_image(radar_greyscale);	//Houses greyscale image copied from object 'a' from Camera class, used to process the safe zone
 	allocate_image(safezone_greyscale);	//Houses the threshold processed image of the safezone, processed with the help of radar_rgb masking the safe zone
 	allocate_image(safezone_label);		//Houses the labelled image of safezone_greyscale, labelling the safe zones
 	allocate_image(radar_a);			//Used to erode/dilate binary image safezone_greyscale
 	allocate_image(radar_b);
 
-	/*IS THAT FROM MY VFF?
-	radar_label.type = LABEL_IMAGE;
-	radar_label.width = 640;
-	radar_label.height = 480;
-
-	allocate_image(radar_rgb);
-	allocate_image(radar_greyscale);
-	allocate_image(radar_label);
-	*/
 	attack_trigger = 0;
 	evade_trigger = 0;
+
+	disable_system = 0;
 
 }
 
@@ -137,40 +127,38 @@ void PT11::init_neural()	//REF1-4 Initialize everytime the simulations starts ov
 }
 
 void PT11::manual_set(int& pw_l, int& pw_r, int& pw_laser, int& laser)
+//Controls both motors based on the keywboard arrow inputs
 {
 	int u[2];
 
 	u[0] = 0;
 	u[1] = 0;
 
+	//Change state variables based on key inputs
 	if (KEY(VK_UP)) u[0] = 500;
 	if (KEY(VK_DOWN)) u[0] = -500;
 	if (KEY(VK_RIGHT)) u[1] = -450;
 	if (KEY(VK_LEFT)) u[1] = 450;
 	
+	//Calculate motor outputs and save value inside robot motor info
 	this->pw_l = 1500 + u[1] - u[0];
 	this->pw_r = 1500 + u[1] + u[0];
 
-	//cout << this->pw_l << "\t" << this->pw_r << endl;
-
+	//Change motor value of actual program using motor info that was previously saved
 	pw_r = this->pw_r;
 	pw_l = this->pw_l;
 	laser = 0;
 
-	/*
-	if (KEY('A')) pw_laser += 100;
-	if (KEY('D')) pw_laser -= 100;
-	*/
 	if (KEY('W')) laser = 1;
 
 }
 
 void PT11::set_coord(double x1, double y1, double x2, double y2)
 {
-	this->x1 = x1;	//Front circle
-	this->y1 = y1;
-	this->x2 = x2;	//Back circle
-	this->y2 = y2;
+	this->x1 = x1;	//Front of robot
+	this->y1 = y1;	//Front of robot
+	this->x2 = x2;	//Back of robot
+	this->y2 = y2;	//Back of robot
 
 	calculate_theta(x1, y1, x2, y2, theta);
 }
@@ -232,6 +220,9 @@ void PT11::collision_points(Camera &view)
 			
 			break;
 		}
+		
+		//Compare if the pixel value of each point in the line is 255 or 0
+		//If any of the values are 255, then a collision has occured
 		check_collision(arrx, arry, view, i);
 
 		delete[]arrx;
@@ -242,6 +233,9 @@ void PT11::collision_points(Camera &view)
 
 void PT11::fill_wheel_void(Camera& view)
 {
+	//This is used to merge the labels on the wheel with the front side of the robot
+	//Else the VFF would conside the wheels as obstacles
+
 	int x_draw;
 	int y_draw;
 
@@ -308,7 +302,6 @@ void PT11::distance_sensor(Camera& view, PT11 enemy)
 
 				arrx[j] += (Ax[i] + LL[i] * j) * cos(theta) - (Ay[i] + LL[i] * j * AF[i]) * sin(theta);
 				arry[j] += (Ax[i] + LL[i] * j) * sin(theta) + (Ay[i] + LL[i] * j * AF[i]) * cos(theta);
-				//distance_input(arrx, arry, view, i);
 				if (flag == 1) draw_point_rgb(view.return_image(), arrx[j], arry[j], 255, 255, 255);
 			}
 			break;
@@ -381,6 +374,9 @@ void PT11::distance_sensor(Camera& view, PT11 enemy)
 			break;
 		}
 
+		//Draw a series of points that change depending on the robot theta
+		//If a value of 255 is detected at any of those points, then
+		//the point number at which it was detected will be the distance sensor value
 		distance_input(arrx, arry, view, i);
 
 		if (i ==0) is_obstacle_before_enemy(arrx, arry, enemy, view);
@@ -450,13 +446,10 @@ void PT11::distance_input(int arrx[], int arry[], Camera& view, int i)
 
 void PT11::is_obstacle_before_enemy(int arrx[], int arry[], PT11 enemy, Camera& view)
 {
-	//cout << "label 1 is at " << enemy.label_nb_1 << endl;
-	//cout << "label 2 is at " << enemy.label_nb_2 << endl;
-
+	//To make sure the robot doesn't fire at the enemy despite having
+	//an obstacle in the middle, this function prevents that kind of enemy detection
 
 	int what_label = 0;
-
-	//copy(view.return_image(), view.return_a());
 
 	ibyte* pa;
 
@@ -506,58 +499,7 @@ void PT11::is_obstacle_before_enemy(int arrx[], int arry[], PT11 enemy, Camera& 
 	distance_enemy1 = sqrt(pow(enemy.get_x1() - x1, 2) + pow(enemy.get_y1() - y1, 2));
 	distance_enemy2 = sqrt(pow(enemy.get_x2() - x1, 2) + pow(enemy.get_y2() - y1, 2));
 	distance_enemy_avg = (distance_enemy1 + distance_enemy2) / 2;
-	/*
-	//int distance_enemy2 = sqrt(pow(enemy.get_x2() - x1, 2) + pow(enemy.get_y2() - y1, 2));
-	int enemy_no_obs1;
-	int enemy_no_obs2;
 
-	//cout << distance_enemy1 << "  |  " << distance_enemy2 << "  |  " << distance_log[0]*LL[0]<< endl;
-
-	int box_length = 100;
-
-	for (int i = 0; i < Ln[0]; i++)
-	{
-		if (arrx[i] > enemy.get_x1() - box_length && arrx[i] < enemy.get_x1() + box_length &&
-			arry[i] > enemy.get_y1() - box_length && arry[i] < enemy.get_y1() + box_length)
-		{
-			enemy_no_obs1 = i * LL[0];
-			break;
-		}
-		else {
-			enemy_no_obs1 = 0;
-		}
-	}
-
-	for (int i = 0; i < Ln[0]; i++)
-	{
-		if (arrx[i] > enemy.get_x2() - box_length && arrx[i] < enemy.get_x2() + box_length &&
-			arry[i] > enemy.get_y2() - box_length && arry[i] < enemy.get_y2() + box_length)
-		{
-			enemy_no_obs2 = i * LL[0];
-			break;
-		}
-		else {
-			enemy_no_obs2 = 0;
-		}
-	}
-	
-	if (target_state == 1 &&
-		(distance_log[0] * LL[0] < enemy_no_obs1 || distance_log[0] * LL[0] < enemy_no_obs2))
-	{
-		is_there_obstacle = 1;
-	}
-	else
-	{
-		is_there_obstacle = 0;
-	}
-	//cout << is_there_obstacle << endl;
-	//cout << target_state << endl;
-	/*
-	cout << distance_log[0] << " ! " << enemy_no_obs1 << endl;
-
-	if (distance_log[0] * LL[0] < enemy_no_obs2) cout << "Obstacle behind enemy front target" << endl;
-	cout << distance_log[0] << " ! " << enemy_no_obs2 << endl;
-	*/
 	
 }
 
@@ -627,10 +569,6 @@ void PT11::check_collision(int arrx[], int arry[], Camera &view, int i)
 		}
 	}
 	
-	//cout << collision_state[0] << "\t" << collision_t_flag[0] << "\t" << collision_t1[0] << "\t" << collision_t2[0] << "\t" << collision_dt[0] << endl;
-
-	//cout << collision_state[0] << "\t" << collision_state[1] << "\t" << collision_state[2] << "\t" << collision_state[3] << endl;
-	
 }
 
 void PT11::calculate_theta(double x1, double y1, double x2, double y2, double &theta)
@@ -699,24 +637,7 @@ void PT11::find_target(PT11 enemy)
 
 	//cout << target_delta1 << "     " << target_delta2 << "    " << endl;
 	
-	/*
-	if (aim_dir == 1)
-	{
-		state_dir[0] = 0;
-		state_dir[1] = 1;
-	}
-	else if (aim_dir == -1)
-	{
-		state_dir[0] = 1;
-		state_dir[1] = 0;
-	}
-
-	if (target_state == 1)
-	{
-		state_dir[0] = 0;
-		state_dir[1] = 0;
-	}
-	*/
+	
 	//cout << state_dir[0] << "    " << state_dir[1] << endl;
 }
 
@@ -745,10 +666,18 @@ void PT11::NeuroLearn(int& pw_l, int& pw_r, int& laser, int &trial_number)
 	trial_timer2 = high_resolution_time();
 	double timer_dt = trial_timer2 - trial_timer1;
 	trial_dt = 20.00;
+
 	
+	for (int i = 0; i < 4; i++)
+	{
+		cout << collision_state[i] << "   ";
+	}
+	cout << endl;
+
 	if (collision_state[0] == 1 || collision_state[1] == 1 || collision_state[2] == 1 || collision_state[3] == 1 || KEY('O') || timer_dt > trial_dt)
 	{
 		flag_reset = 1;
+
 		topology->set_trial_number(trial_number);
 		topology->set_finess_number(fitness);
 
@@ -798,10 +727,12 @@ void PT11::NeuroLearn(int& pw_l, int& pw_r, int& laser, int &trial_number)
 	topology->input[10].set_value(target_state);
 	//topology->input[8].set_value(target_state);
 	
+	/*
 	cout << "Aim L - " << state_dir[0] << " ";
 	cout << "Aim R - " << state_dir[1] << " ";
 	
-	
+	*/
+
 	/*
 	topology->input[0].set_value(collision_state[0]);
 	topology->input[1].set_value(collision_state[1]);
@@ -832,80 +763,10 @@ void PT11::NeuroLearn(int& pw_l, int& pw_r, int& laser, int &trial_number)
 	pw_r = topology->output[1].get_value() * -1000 + 2000;  //2000-1000
 	//laser = topology->output[2].get_value();
 
-	/*
-	double activation[4];
-	for (int i = 0; i < 4; i++)
-	{
-		activation[i] = topology->output[i].get_value();
-		
-		if (activation[i] >= 0.5) activation[i] = 1;
-		if (activation[i] < 0.5) activation[i] = 0;
-
-		cout << activation[i] << "      ";
-	}
-	cout << endl;
-
-	int action = 0;
-	if (activation[0] == 1) action = 1;
-	if (activation[1] == 1) action = 2;
-	if (activation[2] == 1) action = 3;
-	if (activation[3] == 1) action = 4;
-
-	switch (action)
-	{
-	case 1:
-		pw_l = 1000;
-		pw_r = 2000;
-		break;
-	case 2:
-		pw_l = 2000;
-		pw_r = 1000;
-		break;
-	case 3:
-		pw_l = 1000;
-		pw_r = 1000;
-		break;
-	case 4:
-		pw_l = 2000;
-		pw_r = 2000;
-		break;
-	}
-	*/
-
-
-
-	/*
-
-	int u[2];
-
-	u[0] = 0;
-	u[1] = 0;
-
-	double activation[2];
-	for (int i = 0; i < 2; i++)
-	{
-		activation[i] = topology->output[i].get_value();
-		cout << activation[i] << "      ";
-	}
-
-	if (activation[0] >= 0.5) u[0] = 500;
-	if (activation[0] < 0.5) u[0] = -500;
-	if (activation[1] >= 0.5) u[1] = -450;
-	if (activation[1] < 0.5) u[1] = 450;
-
-	this->pw_l = 1500 + u[1] - u[0];
-	this->pw_r = 1500 + u[1] + u[0];
-
-	//cout << this->pw_l << "\t" << this->pw_r << endl;
-
-	pw_r = this->pw_r;
-	pw_l = this->pw_l;
-	*/
 }
 
 void PT11::scout(int& pw_l, int& pw_r, int& pw_laser, int& laser)
 {
-	//Task for Afroza:
 	//Control the robot so it avoids obstacles and attacks the enemy
 	//Using only those variables:
 
@@ -1028,7 +889,6 @@ void PT11::attack(int& pw_l, int& pw_r, int& pw_laser, int& laser)
 	}
 
 	
-
 	if (target_state == 1)
 	{
 		u[0] = 500;
@@ -1038,6 +898,10 @@ void PT11::attack(int& pw_l, int& pw_r, int& pw_laser, int& laser)
 		if (collision_state[2] == 1) u[0] = 100;
 	}
 
+	//cout << VFF_mag << endl;
+
+	if (distance_log[0] < 10 || distance_log[1] < 8 || distance_log[7] < 8) u[0] = -500;
+	if (distance_log[4] < 10 || distance_log[3] < 8 || distance_log[5] < 8) u[0] = 500;
 	
 	if (collision_state[0] == 1) u[0] = -100;
 	//if (collision_state[1] == 1) u[1] = 100;
@@ -1047,7 +911,7 @@ void PT11::attack(int& pw_l, int& pw_r, int& pw_laser, int& laser)
 	//if (distance_log[6] < 4) u[1] = 100;
 	//if (distance_log[2] < 4) u[1] = -100;
 	
-	if (VFF_mag < 150) u[0] = 500;
+	if (VFF_mag < 300) u[0] = 500;
 	if (VFF_mag > 3000) u[0] = 0;
 	
 	//cout << abs(error) << "   " << VFF_mag << endl;
@@ -1061,6 +925,8 @@ void PT11::attack(int& pw_l, int& pw_r, int& pw_laser, int& laser)
 	{
 		u[0] = 0;
 	}
+
+
 	
 	if (target_state == 1 && (target_delta1 < 0.4 || target_delta2 < 0.4))
 	{
@@ -1070,6 +936,8 @@ void PT11::attack(int& pw_l, int& pw_r, int& pw_laser, int& laser)
 	
 	//cout << distance_enemy1 << endl;
 
+	if (disable_system == 1) { u[0] = 0; }
+
 	this->pw_l = 1500 + u[1] - u[0];
 	this->pw_r = 1500 + u[1] + u[0];
 
@@ -1077,70 +945,28 @@ void PT11::attack(int& pw_l, int& pw_r, int& pw_laser, int& laser)
 	//cout << distance_log[0] << endl;
 	//cout << distance_log[0] << "   " << target_state << "   " <<  abs(error) << endl;
 
+	static int laser_timer;
+
+	if (target_state == 1)
+	{
+		laser_timer++;
+	}
+	else laser_timer = 0;
+
+	bool laser_trigger = 0;
+
+	if (laser_timer > 1)
+	{
+		laser_trigger = 1;
+		laser_timer = 0;
+	}
+
 
 	pw_r = this->pw_r;
 	pw_l = this->pw_l;
-	laser = 0;
+	laser = laser_trigger;
 
 
-	/*
-	int u[2];
-
-	u[0] = 0;
-	u[1] = 0;
-
-	double theta_delta;
-	int aim_dir;
-
-	theta_target_delta_fix(VFF_theta, theta_delta, aim_dir);
-
-	
-	if (aim_dir == -1)
-	{
-		u[1] = 450;
-	}
-	else if (aim_dir == 1)
-	{
-		u[1] = -450;
-	}
-	
-	if (theta_delta < 0.15) u[0] = 500;
-
-	if (VFF_mag < 2000) u[0] = 500;
-
-	//if (collision_state[2] == 1) action = 2;
-
-	cout << VFF_theta << "   " << VFF_mag << endl;
-
-	//cout << theta_delta << endl;
-
-
-	this->pw_l = 1500 + u[1] - u[0];
-	this->pw_r = 1500 + u[1] + u[0];
-
-	//cout << this->pw_l << "\t" << this->pw_r << endl;
-
-	pw_r = this->pw_r;
-	pw_l = this->pw_l;
-	laser = 0;
-	*/
-	/*
-	switch (action)
-	{
-	case 0:					//Turn left
-		pw_l = 2000;
-		pw_r = 2000;
-		break;
-	case 1:					//Turn right
-		pw_l = 1000;
-		pw_r = 1000;
-		break;
-	case 2:					//Go Straight
-		pw_l = 1000;
-		pw_r = 2000;
-		break;
-	}
-	*/
 }
 
 void PT11::evade(int& pw_l, int& pw_r, int& pw_laser, int& laser)
@@ -1261,64 +1087,6 @@ void PT11::evade(int& pw_l, int& pw_r, int& pw_laser, int& laser)
 	laser = 0;
 
 
-	/*
-	int u[2];
-
-	u[0] = 0;
-	u[1] = 0;
-
-	double theta_delta;
-	int aim_dir;
-
-	theta_target_delta_fix(VFF_theta, theta_delta, aim_dir);
-
-
-	if (aim_dir == -1)
-	{
-		u[1] = 450;
-	}
-	else if (aim_dir == 1)
-	{
-		u[1] = -450;
-	}
-
-	if (theta_delta < 0.15) u[0] = 500;
-
-	if (VFF_mag < 2000) u[0] = 500;
-
-	//if (collision_state[2] == 1) action = 2;
-
-	cout << VFF_theta << "   " << VFF_mag << endl;
-
-	//cout << theta_delta << endl;
-
-
-	this->pw_l = 1500 + u[1] - u[0];
-	this->pw_r = 1500 + u[1] + u[0];
-
-	//cout << this->pw_l << "\t" << this->pw_r << endl;
-
-	pw_r = this->pw_r;
-	pw_l = this->pw_l;
-	laser = 0;
-	*/
-	/*
-	switch (action)
-	{
-	case 0:					//Turn left
-		pw_l = 2000;
-		pw_r = 2000;
-		break;
-	case 1:					//Turn right
-		pw_l = 1000;
-		pw_r = 1000;
-		break;
-	case 2:					//Go Straight
-		pw_l = 1000;
-		pw_r = 2000;
-		break;
-	}
-	*/
 }
 
 
@@ -1341,7 +1109,7 @@ void PT11::highlight_view(Camera& view, PT11 enemy)
 	double shadow_multiplier;
 	bool shadow_zone_trigger;
 	
-	while (theta_index < (2 * M_PI))
+	while (theta_index < (2 * M_PI) && disable_system != 1)
 	{
 		radius_limit = 200;
 		multiplier = 1;
@@ -1984,8 +1752,8 @@ void PT11::get_safe_zone(Camera& view, PT11& enemy, int pt_i[4], int pt_j[4]) {
 	line_array_j = new int[1000];
 	size = 0;
 
-	x0 = pt_i[1];		//This is the centroids of the "enemy" bot, the one that we are trying to evade
-	y0 = pt_j[1];
+	x0 = enemy.get_x1();// pt_i[1];		//This is the centroids of the "enemy" bot, the one that we are trying to evade
+	y0 = enemy.get_y1();// pt_j[1];
 
 
 	for (border_y = 0; border_y < 480; border_y++) {
@@ -2427,6 +2195,16 @@ void PT11::radar_evasion(int pt_i[4], int pt_j[4], PT11& enemy) {
 		enemy.pw_l = 1000;
 		enemy.pw_r = 2000;
 	} */
+}
+
+void PT11::enemy_out_of_map(PT11 enemy)
+{
+	double robot_elongation = sqrt(pow(enemy.get_x1() - enemy.get_x2(), 2) + pow(enemy.get_y1() - enemy.get_y2(), 2));
+
+	if (robot_elongation > 85 || robot_elongation < 75){ disable_system = 1; }
+	else { disable_system = 0; }
+
+	//cout << disable_system << endl;
 }
 
 PT11::~PT11()

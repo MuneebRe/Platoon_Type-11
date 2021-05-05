@@ -137,7 +137,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Camera.cpp" />
-    <ClCompile Include="NeuralNet.cpp" />
     <ClCompile Include="Neural_Network\Hidden.cpp" />
     <ClCompile Include="Neural_Network\Input.cpp" />
     <ClCompile Include="Neural_Network\NeuroNet.cpp" />
@@ -147,6 +146,8 @@
     <ClCompile Include="robot.cpp" />
     <ClCompile Include="Serial.cpp" />
     <ClCompile Include="serial_com.cpp" />
+    <ClCompile Include="shared_func.cpp" />
+    <ClCompile Include="shared_func.h" />
     <ClCompile Include="shared_memory.cpp" />
     <ClCompile Include="timer.cpp" />
     <ClCompile Include="vision.cpp" />
@@ -154,7 +155,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Camera.h" />
-    <ClInclude Include="NeuralNet.h" />
     <ClInclude Include="Neural_Network\Hidden.h" />
     <ClInclude Include="Neural_Network\Input.h" />
     <ClInclude Include="Neural_Network\NeuroNet.h" />

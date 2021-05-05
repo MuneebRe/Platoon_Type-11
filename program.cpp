@@ -24,14 +24,24 @@ using namespace std;
 #include "PT11.h"
 #include "NeuralNet.h"
 
+#include "shared_func.h"
+
 extern robot_system S1;
 
 
 #define KEY(c) ( GetAsyncKeyState((int)(c)) & (SHORT)0x8000 )
 
+void processing_and_labelling(Camera& view, PT11& pt11, PT11& enemy, int pt_i[], int pt_j[]);
+
+void command_execution(char which_robot, int Robot_Command, bool return_original, bool show_centroids,
+	Camera& view, PT11& pt11, PT11& enemy,
+	int& pw_l, int& pw_r, int& pw_laser, int& laser,
+	int& pw_l_o, int& pw_r_o, int& pw_laser_o, int& laser_o,
+	int pt_i[], int pt_j[]);
+
+
 int main()
 {
-	
 	double x0, y0, theta0, max_speed, opponent_max_speed;
 	int pw_l, pw_r, pw_laser, laser;
 	double light, light_gradient, light_dir, image_noise;
@@ -48,7 +58,6 @@ int main()
 	width1  = 640;
 	height1 = 480;
 	
-	
 	// number of obstacles
 	N_obs  = 2;
 	
@@ -60,16 +69,6 @@ int main()
 	y_obs[2] = 300;// 135; // pixels
 	size_obs[2] = 1.0; // scale factor 1.0 = 100% (not implemented yet)	
 	
-	/*
-	N_obs = 5;
-	for (int i = 1; i <= N_obs; i++)
-	{
-		x_obs[i] = 300;
-		y_obs[i] = 70 * i - 70 ;
-		//y_obs[i] = 0;
-		size_obs[i] = 1.0;
-	}
-	*/
 	// set robot model parameters ////////
 	
 	D = 121.0; // distance between front wheels (pixels)
@@ -98,10 +97,6 @@ int main()
 	activate_simulation(width1,height1,x_obs,y_obs,size_obs,N_obs,
 		"robot_A.bmp","robot_B.bmp","background.bmp","obstacle.bmp",D,Lx,Ly,
 		Ax,Ay,alpha_max,n_robot);	
-
-	// open an output file if needed for testing or plotting
-	//	ofstream fout("sim1.txt");
-	//	fout << scientific;
 	
 	// set simulation mode (level is currently not implemented)
 	// mode = 0 - single player mode (manual opponent)
@@ -111,24 +106,51 @@ int main()
 	level = 1;
 	set_simulation_mode(mode,level);
 
-	int view_state[3] = { true, false, false };	//Defines if enabled/disabled Simulator, Top View Cam, First Person Cam
+	//Defines if camera view enabled/disabled for
+	//int view_state[3] = { true,			//Simulator		   (sim)
+	//					  false,		//Top View Cam     (real)
+	//	                  false };		//First Person Cam (real)
 
-	Camera* view[3];
+	//Camera* view[3];
+	//view[0] = new Camera(view_state[0], 0, 640, 480, RGB_IMAGE, true, 1);	 //Simulator		   (sim)
+	//view[1] = new Camera(view_state[1], 0, 640, 480, RGB_IMAGE, false, 0);	 //Top View Camera	   (real)
+	//view[2] = new Camera(view_state[2], 1, 640, 480, RGB_IMAGE, false, 0);   //First Person Camera (real)
 
-	view[0] = new Camera(view_state[0], 0, 640, 480, RGB_IMAGE, true, 1);	 //Simulator		   (sim)
-	view[1] = new Camera(view_state[1], 0, 640, 480, RGB_IMAGE, false, 0);	 //Top View Camera	   (real)
-	view[2] = new Camera(view_state[2], 1, 640, 480, RGB_IMAGE, false, 0);   //First Person Camera (real)
-	
+
+	int view_state[3] = { true,			//Simulator		   (sim)
+							  false,		//Top View Cam     (real)
+							  false };		//First Person Cam (real)
+
+	//Camera* view[3];
+	//view[0] = new Camera(view_state[0], 0, 640, 480, RGB_IMAGE, true, 1);	 //Simulator		   (sim)
+	//view[1] = new Camera(view_state[1], 0, 640, 480, RGB_IMAGE, false, 0);	 //Top View Camera	   (real)
+	//view[2] = new Camera(view_state[2], 1, 640, 480, RGB_IMAGE, false, 0);   //First Person Camera (real)
+
+	Camera view_0(view_state[0], 0, 640, 480, RGB_IMAGE, true, 1);	 //Simulator
+	Camera view_1(view_state[1], 0, 640, 480, RGB_IMAGE, false, 0);	 //Top View Camera	
+	Camera view_2(view_state[2], 1, 640, 480, RGB_IMAGE, false, 0);	 //First person camera
+
+	int pt_i[4];	//x Point locations of the "colored" parts of both robots
+	int pt_j[4];	//y Point locations of the "colored" parts of both robots
+	PT11 pt11(view_0);		//Make instance of robot (sim)
+	PT11 enemy(view_0);		//Make instance of enemy
+
+
 
 	while (1)
 	{
+	
+	/*
+	//AI Discontinued
 	static int trial_number = 0;
 	cout << "Trial Number " << trial_number << " begin!" << endl;
+	*/
+
 	// set robot initial position (pixels) and angle (rad)
+	
 	x0 = 400;
-	y0 = 400;
+	y0 = 300;
 	theta0 = 0;
-	//theta0 = 3.14159/4;
 	set_robot_position(x0,y0,theta0);
 	
 	// set opponent initial position (pixels) and angle (rad)
@@ -183,23 +205,20 @@ int main()
 
 	int index = 0;	//Used for switching cameras
 
-	int pt_i[4];	//x Point locations of the "colored" parts of both robots
-	int pt_j[4];	//y Point locations of the "colored" parts of both robots
+	//int pt_i[4];	//x Point locations of the "colored" parts of both robots
+	//int pt_j[4];	//y Point locations of the "colored" parts of both robots
 
-	//Serial port(false, "COM12", 1);		//Establish bluetooth communication with robot (real)
+	Serial port(false, "COM12", 1);		//Establish bluetooth communication with robot (real)
 
 	//Enable Neural Network for enemy?
 	static bool AI_player = 0;	//for player
 	static bool AI_enemy = 0;	//REF1-1 enemy will follow weight pattern as pt11
 
-	PT11 pt11(*view[0]);		//Make instance of robot (sim)
-	PT11 enemy(*view[0]);		//Make instance of enemy
+	//PT11 pt11(*view[0]);		//Make instance of robot (sim)
+	//PT11 enemy(*view[0]);		//Make instance of enemy
 
 	if (AI_player == 1) pt11.init_neural();		//REF1-2 Load latest weight data, then randomize it (either relative to best one or fully random)
 	if(AI_enemy == 1) enemy.init_neural();
-
-	//runNet();	//Neural Network copied off online and edited for my use,
-				//But it requires specific training data so it's no good, deals with conflict in order.
 
 	// measure initial clock time
 	tc0 = high_resolution_time(); 
@@ -208,169 +227,38 @@ int main()
 
 		while(1) {
 			
-			//port.send(0, 0, 0, 0);		//Send control order to robot (real)
-
+			port.send(0, 0, 0, 0);		//Send control order to robot (real)
+			
+			/*
 			if (index > view[0]->get_count() - 1) index = 0;	//Roll back view number
 			if (KEY('V') || view_state[index] == false)			//*Only used if using real camera
 			{													//*Changes views
 				index++;
 				Sleep(350);
-				continue;
+				//continue;
 			}
-
-			view[index]->acquire();					//Get RGB image
-			//view[0]->acquire();					//Get RGB image
-			view[index]->draw_border();
-
-			//view[0]->draw_border();
-			view[0]->set_processing(0);			//Set and Prep for original copy
-			view[0]->processing();				//Make a copy of the rgb image
-
-
-			view[0]->set_processing(1);			// Create greyscale/thresholded image 'a' and 'rgb'
-			view[0]->processing();				// So image 'a' can be copied into PT11 'radar_greyscale' image object
-			view[0]->set_processing(3);			// Return 'rgb' to originally acquired image
-			view[0]->processing();				// So image 'rgb' can be copied into PT11 'radar_rgb' image object
-
-			pt11.acquire_camera_image(*view[0]);	// Copies image 'rgb' and greyscale (ie: binary) image 'a' into radar image objects, creates label image
-
-
-			/*
-			view[0]->set_processing(1);			//Prepare rgb image for process used to keep tracking
-			view[0]->track_object();			//Track object selected from view[0]->find_object();
-
-			view[0]->set_processing(3);			//Copy original image to current rgb image
-			view[0]->processing();				//Also, add a point to the "tracked" object
-
-			//view[0]->set_processing(4);
-			//view[0]->processing();
-
-			//view[0]->set_processing(5);
-			//view[0]->processing();
-			*/
-			//view[0]->set_processing(0);			//Set and Prep for original copy		This is redundant?? 
-			//view[0]->processing();				//Make a copy of the rgb image			Delete this??
-
-			/*
-			for (int i = 6; i < 10; i++)
-			{
-				view[0]->set_processing(i);		//Run filter for blue, orange, green and red
-				view[0]->processing();			//to find centroid location for each
-				pt_i[i-6] = view[0]->get_ic();	//And put them in this array
-				pt_j[i-6] = view[0]->get_jc();	//For each color
-			}
-			
-			
-			pt11.set_coord(pt_i[0], pt_j[0], pt_i[3], pt_j[3]);
-			enemy.set_coord(pt_i[2], pt_j[2], pt_i[1], pt_j[1]);
 			*/
 
-			view[0]->set_processing(1);			//Enable threshold processing and everything
-			view[0]->processing();				//Run process
-		
-			
+			processing_and_labelling(view_0, pt11, enemy, pt_i, pt_j);
 
-			view[0]->set_processing(11);		//Enable labeling processing and everything
-			view[0]->processing();				//Run process
-			
-			view[0]->coordinate_finder(pt_i, pt_j);
+			//Write 'A' for Robot A
+			//Write 'B' for Robot B
+			char which_robot = 'A';
 
-			
-			
-			for (int i = 13; i < 17; i++)
-			{
-				view[0]->set_processing(i);		//Run filter for blue, orange, green and red
-				view[0]->processing();			//to find centroid location for each
-				pt_i[i - 13] = view[0]->get_ic();	//And put them in this array
-				pt_j[i - 13] = view[0]->get_jc();	//For each color
-			}
+			//Command 0: Manual Key Control
+			//Command 1: Attack Function
+			//Command 2: Evade Function
+			//Command 3: AI Evolutionary Neural Network (Disabled)
+			//Command 4: Scout function (Discontinued)
+			//Command 5: Do Nothing
 
-			pt11.set_coord(pt_i[2], pt_j[2], pt_i[0], pt_j[0]);
-			enemy.set_coord(pt_i[1], pt_j[1], pt_i[3], pt_j[3]);
+			command_execution('A', 1, 1, 1,	//Robot A or B , Command #0-5, show original 0-1, show centroids 0-1
+							   view_0, pt11, enemy, 
+							   pw_l, pw_r, pw_laser, laser,
+							   pw_l_o, pw_r_o, pw_laser_o, laser_o,
+							   pt_i, pt_j);
 
-			pt11.fill_wheel_void(*view[0]);
-			enemy.fill_wheel_void(*view[0]);
-
-			view[0]->overwrite_border_labels();
-
-			view[0]->set_processing(11);		//Enable labeling processing and everything
-			view[0]->processing();				//Run process
-
-			
-			
-			pt11.label_nb_1 = (int)view[0]->label_at_coordinate(pt_i[2] + 15, pt_j[2] + 15);	//Labeling front wheel (since centroid is not touching object, 15 pixel offset ensures labelling)
-			pt11.label_nb_2 = (int)view[0]->label_at_coordinate(pt_i[0] + 15, pt_j[0] + 15);	//Labelling back wheel
-
-
-			enemy.label_nb_1 = (int)view[0]->label_at_coordinate(pt_i[1] + 15, pt_j[1] + 15);
-			enemy.label_nb_2 = (int)view[0]->label_at_coordinate(pt_i[3] + 15, pt_j[3] + 15);
-
-		
-			
-
-
-			pt11.collision_points(*view[0]);	//Move view[0] object into pt11 function
-			pt11.distance_sensor(*view[0], enemy);
-			pt11.find_target(enemy);
-			//pt11.highlight_view_evade(*view[0], enemy);
-			//pt11.get_safe_zone(*view[0], enemy, pt_i, pt_j);		//This function draws directly onto the latest RGB before its viewed on screen
-			pt11.highlight_view(*view[0], enemy);
-			
-
-			if (AI_player == 1)
-			{
-				pt11.NeuroLearn(pw_l, pw_r, laser, trial_number);
-			}
-			else if (AI_player == 0)
-			{
-				pt11.manual_set(pw_l, pw_r, pw_laser, laser);		//Control the bot. A W D for laser, arrows for bot
-				//pt11.scout(pw_l, pw_r, pw_laser, laser);
-				pt11.attack(pw_l, pw_r, pw_laser, laser);
-				//pt11.evade(pw_l, pw_r, pw_laser, laser);
-			}
-			/*
-			enemy.collision_points(*view[0]);
-			enemy.distance_sensor(*view[0], pt11);
-			enemy.find_target(pt11);
-			enemy.distance_sensor(*view[0], pt11);
-			enemy.highlight_view(*view[0], pt11);
-			*/
-			if (AI_enemy == 1)		//REF1-3 Enable collision detection, target detection, and 8 sides distance sensor, run AI.
-			{
-				//enemy.NeuroLearn(pw_l_o, pw_r_o, laser, trial_number);
-			}
-			else
-			{
-				enemy.manual_set(pw_l_o, pw_r_o, pw_laser_o, laser_o);
-				//enemy.attack(pw_l_o, pw_r_o, pw_laser_o, laser_o);
-			}
-
-			//view[0]->set_processing(3);	//Without this, we would see a thresholded greyscale image of rgb, this brings the original image back.
-			//view[0]->processing();
-
-			for (int i = 0; i < 4; i++)
-			{
-				draw_point_rgb(view[0]->return_image(), pt_i[i], pt_j[i], 0, 255, 255); //Call back array and draw point at those locations
-			}
-
-			////pt11.m_runNet(pw_l, pw_r, laser);		//Also not used, results inconsistent
-			//view[0]->set_processing(12);			//Set and Prep for original copy
-			//view[0]->processing();				//Make a copy of the rgb image
-			/*
-			view[0]->set_processing(0);			//Set and Prep for original copy
-			view[0]->processing();				//Make a copy of the rgb image
-
-			view[0]->set_processing(10);		//Prep for sobel imagery
-			view[0]->processing();				//Do sobel imagery
-			*/
-			//draw_point_rgb(view[0]->return_image(), pt_i[1], pt_j[1], 0, 0, 255);
-			//draw_point_rgb(view[0]->return_image(), pt_i[3], pt_j[3], 0, 0, 255);
-
-			//pt11.get_safe_zone(*view[0], enemy, pt_i, pt_j);		//This function draws directly onto the latest RGB before its viewed on screen
-
-			view[index]->view();	//View the the processed image MUNEEB REF 
-			//view[0]->view();
-
+			view_0.view();
 
 			tc = high_resolution_time() - tc0;
 
@@ -384,6 +272,8 @@ int main()
 			// don't need to simulate too fast
 			Sleep(10); // 100 fps max
 
+			/*
+			//AI Discontinued
 			if (pt11.get_reset_state() == 1 || enemy.get_reset_state() == 1)
 			{
 				trial_number += 1;
@@ -392,7 +282,7 @@ int main()
 				break;
 				
 			}
-
+			*/
 		}
 
 	}
@@ -400,10 +290,153 @@ int main()
 
 	deactivate_vision();
 	
-	deactivate_simulation();	
-	
+	deactivate_simulation();
 	
 	cout << "\ndone.\n";
 
 	return 0;
+}
+
+void processing_and_labelling(Camera& view, PT11& pt11, PT11& enemy, int pt_i[], int pt_j[])
+{
+	view.acquire();					// Get simulation image
+	view.draw_border();				// Draw a black border around the map
+
+	view.set_processing(0);			// Copy 'rgb' image to 'original' image
+	view.processing();
+
+	view.set_processing(1);			// Create greyscale/thresholded image 'a' and 'rgb'
+	view.processing();				// So image 'a' can be copied into PT11 'radar_greyscale' image object
+
+	view.set_processing(3);			// Return 'rgb' to originally acquired image
+	view.processing();				// So image 'rgb' can be copied into PT11 'radar_rgb' image object
+
+	pt11.acquire_camera_image(view);	// Copies image 'rgb' and greyscale (ie: binary) image 'a' into radar image objects, creates label image
+
+	view.set_processing(1);			//Grayscale . Scale . Threshold <100> . ..
+	view.processing();				//..Invert . Erode . Dilate
+
+	view.set_processing(11);		//Label 'rgb' objects to 'label' image 
+	view.processing();
+
+	view.coordinate_finder();	//Find labels of objects with 1000-3000 pixels
+												//Then find the centroid of those of those labels
+
+	for (int i = 13; i < 17; i++)
+	{
+		view.set_processing(i);			//Run filter for blue, orange, green and red
+		view.processing();				//If the rgb pixel for each centroids
+														//found from the coordinate_finder
+														//is the same as the HSV range from the hue_filter function
+														//Then save ic and jc
+		pt_i[i - 13] = view.get_ic();	//And move them in this array
+		pt_j[i - 13] = view.get_jc();	//For each color
+	}
+
+	pt11.set_coord(pt_i[2], pt_j[2], pt_i[0], pt_j[0]);		//Save x1, y1, x2, y2 for Robot A
+	enemy.set_coord(pt_i[1], pt_j[1], pt_i[3], pt_j[3]);	//Save x1, y1, x2, y2 for Robot B
+
+	pt11.fill_wheel_void(view);		//Both wheels will have the same label as the front side of Robot A
+	enemy.fill_wheel_void(view);	//Both wheels will have the same label as the front side of Robot B
+
+	view.overwrite_border_labels();	//Attempt to prevent label from propagating to borders
+
+	view.set_processing(11);		//Label everything again to apply fill_wheel_void changes
+	view.processing();
+
+	pt11.label_nb_1 = (int)view.label_at_coordinate(pt_i[2] + 15, pt_j[2] + 15);	//Label the front side of Robot A
+	pt11.label_nb_2 = (int)view.label_at_coordinate(pt_i[0] + 15, pt_j[0] + 15);	//Label the back side of Robot A
+
+	enemy.label_nb_1 = (int)view.label_at_coordinate(pt_i[1] + 15, pt_j[1] + 15);	//Label the front side of Robot B
+	enemy.label_nb_2 = (int)view.label_at_coordinate(pt_i[3] + 15, pt_j[3] + 15);	//Label the back side of Robot B
+
+
+
+}
+
+void command_execution(char which_robot, int Robot_Command, bool return_original, bool show_centroids,
+	Camera& view, PT11& pt11, PT11& enemy,
+	int& pw_l, int& pw_r, int& pw_laser, int& laser,
+	int& pw_l_o, int& pw_r_o, int& pw_laser_o, int& laser_o,
+	int pt_i[], int pt_j[])
+{
+
+
+	//Write 'A' for Robot A
+	//Write 'B' for Robot B
+	//char which_robot = 'A';
+
+	//Command 0: Manual Key Control
+	//Command 1: Attack Function
+	//Command 2: Evade Function
+	//Command 3: AI Evolutionary Neural Network (Disabled)
+	//Command 4: Scout function (Discontinued)
+	//Command 5: Do Nothing
+
+	//int Robot_Command = 1;
+
+	if (which_robot == 'A')
+	{
+		pt11.collision_points(view);					//Enable collision sensor for Robot A
+		pt11.distance_sensor(view, enemy);				//Enable distance sensor for Robot A
+		if (Robot_Command == 1) pt11.find_target(enemy);							//Find target and determine which side is it located on
+		if (Robot_Command == 2) pt11.highlight_view_evade(view, enemy);		//Enable MR's Safe zone feature
+		if (Robot_Command == 2) pt11.get_safe_zone(view, enemy, pt_i, pt_j);	//Enable GG's Safe zone feature
+		pt11.highlight_view(view, enemy);				//Enable VFF highlighter
+		pt11.enemy_out_of_map(enemy);						//Disable VFF if enemy outside of map
+	}
+
+	if (which_robot == 'B')
+	{
+		enemy.collision_points(view);					//Enable collision sensor for Robot A
+		enemy.distance_sensor(view, pt11);				//Enable distance sensor for Robot A
+		if (Robot_Command == 1) enemy.find_target(pt11);							//Find target and determine which side is it located on
+		if (Robot_Command == 2) enemy.highlight_view_evade(view, pt11);		//Enable MR's Safe zone feature
+		if (Robot_Command == 2) enemy.get_safe_zone(view, pt11, pt_i, pt_j);	//Enable GG's Safe zone feature
+		enemy.highlight_view(view, pt11);				//Enable VFF highlighter
+		enemy.enemy_out_of_map(pt11);						//Disable VFF if enemy outside of map
+	}
+
+	switch (Robot_Command)
+	{
+	case 0:
+		if (which_robot == 'A') pt11.manual_set(pw_l, pw_r, pw_laser, laser);		//Control the bot. A W D for laser, arrows for bot
+		if (which_robot == 'B') enemy.manual_set(pw_l_o, pw_r_o, pw_laser_o, laser_o);		//Control the bot. A W D for laser, arrows for bot
+		break;
+	case 1:
+		if (which_robot == 'A') pt11.attack(pw_l, pw_r, pw_laser, laser);
+		if (which_robot == 'B') enemy.attack(pw_l_o, pw_r_o, pw_laser_o, laser_o);
+		break;
+	case 2:
+		if (which_robot == 'A') pt11.evade(pw_l, pw_r, pw_laser, laser);
+		if (which_robot == 'B') enemy.evade(pw_l_o, pw_r_o, pw_laser_o, laser_o);
+		break;
+	case 3:
+		//pt11.NeuroLearn(pw_l, pw_r, laser, trial_number);  //Discontinued! AI keeps resetting because collision_points for some reason...
+		break;
+	case 4:
+		if (which_robot == 'A') enemy.scout(pw_l, pw_r, pw_laser, laser);
+		if (which_robot == 'B') enemy.scout(pw_l_o, pw_r_o, pw_laser_o, laser_o);
+		break;
+	case 5:
+		//Don't do anything
+		break;
+	}
+
+	if (which_robot == 'A') enemy.manual_set(pw_l_o, pw_r_o, pw_laser_o, laser_o);
+	if (which_robot == 'B') pt11.manual_set(pw_l, pw_r, pw_laser, laser);
+
+	if (show_centroids == 1)
+	{
+		for (int i = 0; i < 4; i++)
+		{
+			draw_point_rgb(view.return_image(), pt_i[i], pt_j[i], 0, 255, 255); //Call back array and draw point at those locations
+		}
+	}
+
+	if (return_original == 1)
+	{
+		view.set_processing(12);			//Copy 'original' image to 'rgb' image
+		view.processing();
+	}
 }
