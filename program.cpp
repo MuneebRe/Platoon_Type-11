@@ -252,7 +252,7 @@ int main()
 			//Command 4: Scout function (Discontinued)
 			//Command 5: Do Nothing
 
-			command_execution('A', 1, 1, 1,	//Robot A or B , Command #0-5, show original 0-1, show centroids 0-1
+			command_execution('A', 1, 0, 1,	//Robot A or B , Command #0-5, show original 0-1, show centroids 0-1
 							   view_0, pt11, enemy, 
 							   pw_l, pw_r, pw_laser, laser,
 							   pw_l_o, pw_r_o, pw_laser_o, laser_o,
@@ -305,22 +305,16 @@ void processing_and_labelling(Camera& view, PT11& pt11, PT11& enemy, int pt_i[],
 	view.set_processing(0);			// Copy 'rgb' image to 'original' image
 	view.processing();
 
-	view.set_processing(1);			// Create greyscale/thresholded image 'a' and 'rgb'
-	view.processing();				// So image 'a' can be copied into PT11 'radar_greyscale' image object
-
-	view.set_processing(3);			// Return 'rgb' to originally acquired image
-	view.processing();				// So image 'rgb' can be copied into PT11 'radar_rgb' image object
-
-	pt11.acquire_camera_image(view);	// Copies image 'rgb' and greyscale (ie: binary) image 'a' into radar image objects, creates label image
-
 	view.set_processing(1);			//Grayscale . Scale . Threshold <100> . ..
 	view.processing();				//..Invert . Erode . Dilate
+
+	pt11.acquire_camera_image(view);	// Copies image 'rgb' and greyscale (ie: binary) image 'a' into radar image objects, creates label image
 
 	view.set_processing(11);		//Label 'rgb' objects to 'label' image 
 	view.processing();
 
 	view.coordinate_finder();	//Find labels of objects with 1000-3000 pixels
-												//Then find the centroid of those of those labels
+								//Then find the centroid of those of those labels
 
 	for (int i = 13; i < 17; i++)
 	{

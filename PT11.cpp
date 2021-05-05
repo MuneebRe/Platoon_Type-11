@@ -1044,7 +1044,7 @@ void PT11::evade(int& pw_l, int& pw_r, int& pw_laser, int& laser)
 	//if (collision_state[3] == 1) u[1] = -100;
 	if (collision_state[2] == 1) u[0] = 300;
 
-	cout << VFF_mag << endl;
+	//cout << VFF_mag << endl;
 	
 	if (VFF_mag < 1500)
 	{
