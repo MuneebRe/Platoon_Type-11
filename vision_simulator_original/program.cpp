@@ -93,7 +93,7 @@ int main()
 	activate_vision();
 
 	activate_simulation(width1,height1,x_obs,y_obs,size_obs,N_obs,
-		"robot_A.bmp","robot_B.bmp","background.bmp","obstacle_orange.bmp",D,Lx,Ly,
+		"robot_A.bmp","robot_B.bmp","background.bmp","obstacle_green.bmp",D,Lx,Ly,
 		Ax,Ay,alpha_max,n_robot);	
 	
 	// set simulation mode (level is currently not implemented)
@@ -250,7 +250,7 @@ int main()
 			//Command 4: Scout function (Discontinued)
 			//Command 5: Do Nothing
 
-			command_execution('A', 2, 0, 1,	//Robot A or B , Command #0-5, show original 0-1, show centroids 0-1
+			command_execution('A', 1, 0, 1,	//Robot A or B , Command #0-5, show original 0-1, show centroids 0-1
 							   view_0, pt11, enemy, 
 							   pw_l, pw_r, pw_laser, laser,
 							   pw_l_o, pw_r_o, pw_laser_o, laser_o,

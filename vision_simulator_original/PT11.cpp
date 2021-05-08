@@ -986,7 +986,7 @@ void PT11::evade(int& pw_l, int& pw_r, int& pw_laser, int& laser)
 	time_delta = time2 - time1;
 	time1 = time2;
 
-	double kp_PID = 10000;
+	double kp_PID = 1000;
 	double kd_PID = 30;
 	double ki_PID = 1;
 
@@ -1062,6 +1062,8 @@ void PT11::evade(int& pw_l, int& pw_r, int& pw_laser, int& laser)
 
 	//if (VFF_mag < 300) u[0] = 500;
 	if (VFF_mag > 400000) { u[0] = 0; u[1] = 0; }
+
+	//cout << VFF_mag << endl;
 
 	//cout << VFF_mag << endl;
 

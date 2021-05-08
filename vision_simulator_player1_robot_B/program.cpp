@@ -116,8 +116,8 @@ int main()
 
 
 	int view_state[3] = { true,			//Simulator		   (sim)
-							  false,		//Top View Cam     (real)
-							  false };		//First Person Cam (real)
+						 false,		//Top View Cam     (real)
+					     false };		//First Person Cam (real)
 
 	//Camera* view[3];
 	//view[0] = new Camera(view_state[0], 0, 640, 480, RGB_IMAGE, true, 1);	 //Simulator		   (sim)
@@ -255,7 +255,7 @@ int main()
 			//Command 4: Scout function (Discontinued)
 			//Command 5: Do Nothing
 
-			command_execution('A', 1, 0, 1,	//Robot A or B , Command #0-5, show original 0-1, show centroids 0-1
+			command_execution('A', 2, 1, 1,	//Robot A or B , Command #0-5, show original 0-1, show centroids 0-1
 							   view_0, pt11, enemy, 
 							   pw_l, pw_r, pw_laser, laser,
 							   pw_l_o, pw_r_o, pw_laser_o, laser_o,

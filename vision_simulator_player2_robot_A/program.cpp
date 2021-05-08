@@ -148,7 +148,7 @@ int main()
 	
 	x0 = 150;
 	y0 = 200;
-	theta0 = 0;
+	theta0 = 3.14/2;
 	set_robot_position(x0,y0,theta0);
 	
 	/*
@@ -254,13 +254,13 @@ int main()
 			//Command 4: Scout function (Discontinued)
 			//Command 5: Do Nothing
 
-			command_execution('A', 5, 0, 1,	//Robot A or B , Command #0-5, show original 0-1, show centroids 0-1
+			command_execution('A', 1, 0, 1,	//Robot A or B , Command #0-5, show original 0-1, show centroids 0-1
 							   view_0, pt11, enemy, 
 							   pw_l, pw_r, pw_laser, laser,
 							   pw_l_o, pw_r_o, pw_laser_o, laser_o,
 							   pt_i, pt_j);
 
-			view_0.view();
+			//view_0.view();
 
 			tc = high_resolution_time() - tc0;
 
