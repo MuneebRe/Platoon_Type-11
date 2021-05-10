@@ -282,11 +282,12 @@ int main()
 
 			pt11.collision_points(*view[0]);	//Move view[0] object into pt11 function
 			
-			if(pt11.collision_reset == 0){
+			//Alex Evading (Ignore the desired point location)
+			//if(pt11.collision_reset == 0){
 
 			pt11.find_target(enemy);
 			
-			}
+			//}
 
 			pt11.distance_sensor(*view[0], enemy);
 			//pt11.find_target(enemy);
@@ -301,7 +302,9 @@ int main()
 				//pt11.manual_set(pw_l, pw_r, pw_laser, laser);		//Control the bot. A W D for laser, arrows for bot
 				//pt11.scout(pw_l, pw_r, pw_laser, laser);
 				//pt11.attack(pw_l, pw_r, pw_laser, laser);
-				pt11.flee(pw_l, pw_r, pw_laser,laser, tc0);
+				
+				// Alex evading method
+				//pt11.flee(pw_l, pw_r, pw_laser,laser, tc0);
 			}
 			/*
 			enemy.collision_points(*view[0]);

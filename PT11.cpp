@@ -967,7 +967,6 @@ void PT11::flee(int& pw_l, int& pw_r, int& pw_laser, int& laser, int tc0)
 	static double front_end_distance = 0;
 
 	//Control the robot so it avoids obstacles initially.
-	//Combine with Gurv to hide
 	//Using only those variables:
 
 	//Distance sensor:
@@ -1049,7 +1048,7 @@ void PT11::flee(int& pw_l, int& pw_r, int& pw_laser, int& laser, int tc0)
 
 	}
 	
-	if (collision_reset == 1 && reverse == 1)
+	if (collision_reset == 1 && reverse == 1) //Reversing away from front collision
 	{
 		action = 3;
 
@@ -1063,7 +1062,7 @@ void PT11::flee(int& pw_l, int& pw_r, int& pw_laser, int& laser, int tc0)
 	}
 	
 	
-	if ( turn_right == 1 && collision_reset == 1 && reverse == 0)
+	if ( turn_right == 1 && collision_reset == 1 && reverse == 0)//Turning right
 	{
 		action = 1;
 
@@ -1079,7 +1078,7 @@ void PT11::flee(int& pw_l, int& pw_r, int& pw_laser, int& laser, int tc0)
 		
 	}
 
-	if (turn_left == 1 && collision_reset == 1 && reverse == 0)
+	if (turn_left == 1 && collision_reset == 1 && reverse == 0)//Turning right
 	{
 		action = 0;
 		if (theta_pt11 <= collision_angle - (M_PI / 4))
@@ -1094,7 +1093,7 @@ void PT11::flee(int& pw_l, int& pw_r, int& pw_laser, int& laser, int tc0)
 
 	}
 	
-	if (collision_reset == 1 && drive_straight == 1)
+	if (collision_reset == 1 && drive_straight == 1)//Avoiding maneuver
 	{
 		action = 2;
 
@@ -1109,7 +1108,7 @@ void PT11::flee(int& pw_l, int& pw_r, int& pw_laser, int& laser, int tc0)
 	}
 
 	
-	if (collision_state[2] != 0 ) { //Rear
+	if (collision_state[2] != 0 ) { //Rear Collision
 
 		rear_collision_distance = distance_log[4];
 		if (rear_collision_distance < 5) {
@@ -1143,7 +1142,7 @@ void PT11::flee(int& pw_l, int& pw_r, int& pw_laser, int& laser, int tc0)
 	//pw_l = this->pw_l;
 	laser = 0;
 
-	cout << "Front Collision: " << collision_state[0] << "\t" << "Rear Collision: " << collision_state[2] << "\t" << "Left Collision: " << collision_state[3] << "\t" << "Right Collision: " << collision_state[1] << endl;
+	//cout << "Front Collision: " << collision_state[0] << "\t" << "Rear Collision: " << collision_state[2] << "\t" << "Left Collision: " << collision_state[3] << "\t" << "Right Collision: " << collision_state[1] << endl;
 	//cout << "Front Distance: " << distance_log[0] << "\tRight Front Distance: " << distance_log[1] << "\tLeft Front Distance: " << distance_log[7] << endl;
 	//cout << "Clockwise from theta: " << state_dir[1] << "\t" << "Counter Clockwise from theta: " << state_dir[0] << endl;
 	//cout << "Action: " << action << endl;
