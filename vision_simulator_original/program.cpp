@@ -237,18 +237,25 @@ int main()
 			}
 			*/
 
+			///////////////////////////////////////////////////////////////////////
+
 			processing_and_labelling(view_0, pt11, enemy, pt_i, pt_j);
 
+			//Argument 1: Robot Identification
 			//Write 'A' for Robot A
 			//Write 'B' for Robot B
 			char which_robot = 'A';
 
+			//Argument 2: Output Command
 			//Command 0: Manual Key Control
 			//Command 1: Attack Function
 			//Command 2: Evade Function
 			//Command 3: AI Evolutionary Neural Network (Disabled)
 			//Command 4: Scout function (Discontinued)
 			//Command 5: Do Nothing
+
+			//Argument 3: 1 if you want to see the original view, 0 if you want to see the back processing
+			//Argument 4: 1 if you want to see the robot centroids, 0 if not.
 
 			command_execution('A', 1, 0, 1,	//Robot A or B , Command #0-5, show original 0-1, show centroids 0-1
 							   view_0, pt11, enemy, 
@@ -257,6 +264,8 @@ int main()
 							   pt_i, pt_j);
 
 			view_0.view();
+
+			///////////////////////////////////////////////////////////////////////
 
 			tc = high_resolution_time() - tc0;
 
