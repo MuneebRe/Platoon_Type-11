@@ -1,4 +1,0 @@
-C:\Users\Muneeb\Documents\GitHub\Platoon_Type-11\Debug\program.exe
-C:\Users\Muneeb\Documents\GitHub\Platoon_Type-11\Debug\program.pdb
-C:\Users\Muneeb\Documents\GitHub\Platoon_Type-11\vision_simulator_original\Debug\program.exe
-C:\Users\Muneeb\Documents\GitHub\Platoon_Type-11\vision_simulator_original\Debug\program.pdb
