@@ -2235,6 +2235,226 @@ void PT11::enemy_out_of_map(PT11 enemy)
 	//cout << disable_system << endl;
 }
 
+void PT11::flee(int& pw_l, int& pw_r, int& pw_laser, int& laser, int tc0)
+{
+
+	double timer_count;
+	static bool turn_right = 0, turn_left = 0, reverse = 0, forward = 0, drive_straight = 0;
+	double theta_pt11;
+	static double collision_angle = 0, rear_collision_distance = 0;
+	static double front_end_distance = 0;
+
+	//Control the robot so it avoids obstacles initially.
+	//Using only those variables:
+
+	//Distance sensor:
+	//distance_log[0]	Front distance sensor
+	//distance_log[1]	Front Right distance sensor
+	//distance_log[2]	Right side distance sensor
+	//distance_log[3]	Back right distance sensor
+	//distance_log[4]	Back distance sensor
+	//distance_log[5]	Back left distance sensor
+	//distance_log[6]	Left distance sensor
+	//distance_log[7]	Forward left distance sensor
+	//Note: The values stored in those is under Ln[...], check void PT11::distance_sensor.
+	//Basically, if Ln[0] were 100, my robot is draw 100 points on a straight line
+	//If the white pixel of an obstacle was found in point 60, then ditance_log[0] would return 60.
+
+	//Collision sensor:
+	//collision_state[0]	Front collision
+	//collision_state[1]	Right collision
+	//collision_state[2]	Back collision
+	//collision_state[3]	Left collision
+	//Value is either 0 or 1.
+
+	//target_state		Will return 1 if the front distance sensor is directly looking at the enemy
+	//					Will return 0 if enemy hiding behind obstacle, or just looking at obstacle
+	//state_dir[0]		Will return 1 if the enemy is counter clockwise from your theta
+	//state_dir[1]		Will return 0 if enemy is clockwise from your theta
+
+	//In order to know if those values make sense, use cout << [thing of interest] << "  " << [other thing] << ...  << endl;
+	//To use this whole function, make sure that AI_player = 0 in program.cpp, and that pt11.scout(pw_l, pw_r, pw_laser, laser);
+	//is commented out, while commenting pt11.manual_set(pw_l, pw_r, pw_laser, laser);
+
+	int action;
+	//cout << 'Forward' << endl;
+
+	if (state_dir[0] == 1) action = 0;
+	if (state_dir[1] == 1) action = 1;
+	//if (target_state == 1) action = 2;
+
+	int u[2];
+
+	u[0] = 0;
+	u[1] = 0;
+
+	calculate_theta(get_x1(), get_y1(), get_x2(), get_y2(), theta_pt11);
+	timer_count = high_resolution_time() - tc0;
+
+	//Move staight towards target
+	if ((collision_state[0] == 0 && collision_state[3] == 0 && collision_state[1] == 0 && collision_reset == 0) || (collision_state[2] == 1)) { //Front
+
+		if (KEY(VK_UP)) u[0] = 500;
+		//action = 2;
+		//action = 4;
+		if (target_state == 1) action = 2;
+		//action = 2;
+
+	}
+
+	//Front collision will be the most likely type of collision
+	//We need to be able to reverse out of the collision and readjust
+
+	if (collision_state[0] == 1) { //Front collision
+
+		if (distance_log[1] > distance_log[7]) {
+
+			turn_right = 1;
+			turn_left = 0;
+		}
+
+		if (distance_log[1] < distance_log[7]) {
+
+			turn_left = 1;
+			turn_right = 0;
+		}
+
+		reverse = 1;
+		rear_collision_distance = distance_log[4];
+		collision_angle = theta_pt11;
+		collision_reset = 1;
+
+	}
+
+	if (collision_reset == 1 && reverse == 1) //Reversing away from front collision
+	{
+		action = 3;
+
+		if (rear_collision_distance - distance_log[4] >= 10 || distance_log[4] <= 4)
+		{
+			reverse = 0;
+			rear_collision_distance = 0;
+			action = 4;
+		}
+
+	}
+
+
+	if (turn_right == 1 && collision_reset == 1 && reverse == 0)//Turning right
+	{
+		action = 1;
+
+		if (theta_pt11 <= collision_angle - (M_PI / 4))
+		{
+			action = 4;
+			drive_straight = 1;
+			front_end_distance = distance_log[0];
+			collision_angle = 0;
+			turn_right = 0;
+		}
+
+
+	}
+
+	if (turn_left == 1 && collision_reset == 1 && reverse == 0)//Turning right
+	{
+		action = 0;
+		if (theta_pt11 <= collision_angle - (M_PI / 4))
+		{
+			action = 4;
+			drive_straight = 1;
+			front_end_distance = distance_log[0];
+			collision_angle = 0;
+			turn_left = 0;
+		}
+
+
+	}
+
+	if (collision_reset == 1 && drive_straight == 1)//Avoiding maneuver
+	{
+		action = 2;
+
+		if (front_end_distance - distance_log[0] >= 10 || distance_log[0] <= 4)
+		{
+			drive_straight = 0;
+			action = 4;
+			collision_reset = 0;
+		}
+
+
+	}
+
+
+	if (collision_state[2] != 0) { //Rear Collision
+
+		rear_collision_distance = distance_log[4];
+		if (rear_collision_distance < 5) {
+			action = 2;
+			rear_collision_distance = 0;
+		}
+
+
+	}
+	/*
+	if (collision_state[1] != 0) { //Left
+
+		action = 1;
+
+	}
+	if (collision_state[3] != 0) { // Right
+
+		action = 0;
+
+	}
+	*/
+	//if (KEY(VK_UP)) u[0] = 500;
+	//if (KEY(VK_DOWN)) u[0] = -500;
+	//if (KEY(VK_RIGHT)) u[1] = -450;
+	//if (KEY(VK_LEFT)) u[1] = 450;
+
+	//this->pw_l = 1500 + u[1] - u[0];
+	//this->pw_r = 1500 + u[1] + u[0];
+
+	//pw_r = this->pw_r;
+	//pw_l = this->pw_l;
+	laser = 0;
+
+	//cout << "Front Collision: " << collision_state[0] << "\t" << "Rear Collision: " << collision_state[2] << "\t" << "Left Collision: " << collision_state[3] << "\t" << "Right Collision: " << collision_state[1] << endl;
+	//cout << "Front Distance: " << distance_log[0] << "\tRight Front Distance: " << distance_log[1] << "\tLeft Front Distance: " << distance_log[7] << endl;
+	//cout << "Clockwise from theta: " << state_dir[1] << "\t" << "Counter Clockwise from theta: " << state_dir[0] << endl;
+	//cout << "Action: " << action << endl;
+	//cout << "Turn Left: " << turn_left << " " << "Turn Right: " << turn_right << endl;
+	//cout << theta_pt11 << endl;
+
+	cout << "Rear: " << rear_collision_distance << "\t" << "Sensor: " << distance_log[4] << endl;
+
+	switch (action)
+	{
+	case 0:
+		pw_l = 2000; //Left
+		pw_r = 2000;
+		break;
+	case 1:
+		pw_l = 1000; // Right
+		pw_r = 1000;
+		break;
+	case 2:
+		pw_l = 1000; // Straight
+		pw_r = 2000;
+		break;
+	case 3:
+		pw_l = 2000; // Reverse
+		pw_r = 1000;
+		break;
+	case 4:
+		pw_l = 1500; // Brake
+		pw_r = 1500;
+		break;
+	}
+
+}
+
 PT11::~PT11()
 {
 

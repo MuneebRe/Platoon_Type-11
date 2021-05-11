@@ -63,6 +63,8 @@ private:
 	bool disable_system;
 	bool disable_laser;
 
+	bool collision_reset;
+
 public:
 	//Muneeb functions:
 	PT11(Camera& view);
@@ -113,4 +115,7 @@ public:
 	void assess_safe_zone(Camera& view);
 	int radar_centroid(image& a, image& label, int nlabel, double& ic, double& jc, int& flag);
 	void radar_evasion(int pt_i[4], int pt_j[4], PT11& enemy); //Using VFF
+
+	//Alexandro's functon:
+	void PT11::flee(int& pw_l, int& pw_r, int& pw_laser, int& laser, int tc0);
 };
